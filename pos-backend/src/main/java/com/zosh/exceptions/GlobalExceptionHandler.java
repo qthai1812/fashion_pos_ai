@@ -1,0 +1,99 @@
+package com.zosh.exceptions;
+
+import com.zosh.payload.response.ApiResponse;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.OptimisticLockException;
+import jakarta.persistence.PessimisticLockException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
+
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(UserException.class)
+    public ResponseEntity<ApiResponse> handleUserException(UserException ex) {
+        return buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiResponse> handleBadCredentials(BadCredentialsException ex) {
+        return buildResponse(ex.getMessage(), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse> handleAccessDenied(AccessDeniedException ex) {
+        return buildResponse("You do not have permission to perform this action", HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler({EntityNotFoundException.class, NoSuchElementException.class})
+    public ResponseEntity<ApiResponse> handleNotFound(RuntimeException ex) {
+        return buildResponse(ex.getMessage() != null ? ex.getMessage() : "Resource not found", HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse> handleValidationException(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+        return buildResponse(message, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler({OptimisticLockException.class, PessimisticLockException.class})
+    public ResponseEntity<ApiResponse> handleConcurrencyException(Exception ex) {
+        log.warn("Concurrency conflict detected: {}", ex.getMessage());
+        return buildResponse("Resource is being updated by another transaction. Please retry.", HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.warn("Database constraint violation: {}", ex.getMessage());
+        return buildResponse("Data integrity violation: duplicate or invalid reference data.", HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        return buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse> handleGenericException(Exception ex) {
+        String msg = ex.getMessage() != null ? ex.getMessage() : "";
+        String lower = msg.toLowerCase();
+
+        // Phân loại thông minh các ngoại lệ nghiệp vụ đang ném bằng 'new Exception(...)'
+        if (lower.contains("not found") || lower.contains("not exist") || lower.contains("doesn't exist")) {
+            return buildResponse(msg, HttpStatus.NOT_FOUND);
+        }
+        if (lower.contains("permission") || lower.contains("only store admin")) {
+            return buildResponse(msg, HttpStatus.FORBIDDEN);
+        }
+        if (lower.contains("already") || lower.contains("insufficient stock")
+                || lower.contains("invalid") || lower.contains("expired")
+                || lower.contains("disabled") || lower.contains("minimum")
+                || lower.contains("exceeds") || lower.contains("required")
+                || lower.contains("not active") || lower.contains("not supported")) {
+            return buildResponse(msg, HttpStatus.BAD_REQUEST);
+        }
+
+        // Lỗi hệ thống thực sự: ghi log chi tiết và ẩn chi tiết nhạy cảm khỏi client
+        log.error("Unhandled internal server error: ", ex);
+        return buildResponse("An unexpected internal server error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private ResponseEntity<ApiResponse> buildResponse(String message, HttpStatus status) {
+        ApiResponse response = new ApiResponse();
+        response.setMessage(message);
+        return new ResponseEntity<>(response, status);
+    }
+}

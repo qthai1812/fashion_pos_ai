@@ -1,0 +1,89 @@
+package com.zosh.service.impl;
+
+import com.zosh.domain.StoreStatus;
+import com.zosh.modal.Store;
+import com.zosh.payload.response.DashboardSummaryDTO;
+import com.zosh.payload.response.StoreRegistrationStatDTO;
+import com.zosh.payload.response.StoreStatusDistributionDTO;
+import com.zosh.repository.StoreRepository;
+import com.zosh.service.SuperAdminDashboardService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class SuperAdminDashboardServiceImpl implements SuperAdminDashboardService {
+
+    private final StoreRepository storeRepository;
+
+    @Override
+    public DashboardSummaryDTO getDashboardSummary() {
+        long total = storeRepository.count();
+        long active = storeRepository.countByStatus(StoreStatus.ACTIVE);
+        long pending = storeRepository.countByStatus(StoreStatus.PENDING);
+        long blocked = storeRepository.countByStatus(StoreStatus.BLOCKED);
+
+        return DashboardSummaryDTO.builder()
+                .totalStores(total)
+                .activeStores(active)
+                .pendingStores(pending)
+                .blockedStores(blocked)
+                .build();
+    }
+
+    @Override
+    public List<StoreRegistrationStatDTO> getStoreRegistrationStats() {
+        LocalDate today = LocalDate.now();
+        LocalDate sevenDaysAgo = today.minusDays(6);
+
+        LocalDateTime start = sevenDaysAgo.atStartOfDay();
+        LocalDateTime end = today.atTime(LocalTime.MAX);
+
+        List<Store> recentStores = storeRepository.findByCreatedAtBetween(start, end);
+
+        // Group by date
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        Map<String, Long> countByDate = recentStores.stream()
+                .filter(s -> s.getCreatedAt() != null)
+                .collect(Collectors.groupingBy(
+                        s -> s.getCreatedAt().toLocalDate().format(formatter),
+                        Collectors.counting()
+                ));
+
+        // Build result for all 7 days (even if count is 0)
+        List<StoreRegistrationStatDTO> result = new ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            LocalDate date = sevenDaysAgo.plusDays(i);
+            String dateStr = date.format(formatter);
+            long count = countByDate.getOrDefault(dateStr, 0L);
+            result.add(StoreRegistrationStatDTO.builder()
+                    .date(dateStr)
+                    .count(count)
+                    .build());
+        }
+
+        return result;
+    }
+
+    @Override
+    public StoreStatusDistributionDTO getStoreStatusDistribution() {
+        long active = storeRepository.countByStatus(StoreStatus.ACTIVE);
+        long pending = storeRepository.countByStatus(StoreStatus.PENDING);
+        long blocked = storeRepository.countByStatus(StoreStatus.BLOCKED);
+
+        return StoreStatusDistributionDTO.builder()
+                .active(active)
+                .pending(pending)
+                .blocked(blocked)
+                .build();
+    }
+}
