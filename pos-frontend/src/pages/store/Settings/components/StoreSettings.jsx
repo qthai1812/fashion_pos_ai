@@ -9,10 +9,14 @@ import { getInitialValues } from "./formUtils";
 
 const StoreSettings = ({ settings, onChange }) => {
   const dispatch = useDispatch();
-  const { store, loading, error } = useSelector((state) => state.store);
+  const { store, loading } = useSelector((state) => state.store);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleFormSubmit = async (apiData, { setSubmitting, resetForm }) => {
+  const handleFormSubmit = async (
+    apiData,
+    { setSubmitting, resetForm },
+    values,
+  ) => {
     if (!store?.id) {
       toast({
         title: "Error",
@@ -24,22 +28,25 @@ const StoreSettings = ({ settings, onChange }) => {
 
     setIsSubmitting(true);
     try {
-      await dispatch(updateStore({ 
-        id: store.id, 
-        storeData: apiData
-      })).unwrap();
-      
+      await dispatch(
+        updateStore({
+          id: store.id,
+          storeData: apiData,
+        }),
+      ).unwrap();
+
       toast({
         title: "Success",
         description: "Store settings updated successfully",
       });
-      
-      // Update local settings state
-      Object.keys(settings).forEach(key => {
-        onChange(key, settings[key]);
+
+      // Sync updated values with parent state
+      const nextSettings = values || settings;
+      Object.keys(nextSettings).forEach((key) => {
+        onChange(key, nextSettings[key]);
       });
-      
-      resetForm({ values: getInitialValues(store) });
+
+      resetForm({ values: nextSettings || getInitialValues(store) });
     } catch (err) {
       toast({
         title: "Error",
@@ -67,8 +74,8 @@ const StoreSettings = ({ settings, onChange }) => {
         <StoreSettingsForm
           initialValues={settings}
           onSubmit={handleFormSubmit}
+          onChange={onChange}
           isSubmitting={isSubmitting || loading}
-          storeId={store?.id}
         />
       </CardContent>
     </Card>

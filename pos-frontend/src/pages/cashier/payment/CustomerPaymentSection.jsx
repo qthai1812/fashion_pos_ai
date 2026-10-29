@@ -6,6 +6,7 @@ import PaymentSection from "./PaymentSection";
 const CustomerPaymentSection = ({
   setShowCustomerDialog,
   setShowPaymentDialog,
+  discountInputRef,
 }) => {
   return (
     <div className="w-full flex flex-col bg-card overflow-y-auto h-full">
@@ -13,7 +14,7 @@ const CustomerPaymentSection = ({
       <CustomerSection setShowCustomerDialog={setShowCustomerDialog} />
 
       {/* Discount Section */}
-      <DiscountSection />
+      <DiscountSection discountInputRef={discountInputRef} />
 
       {/* Note Section */}
       <NoteSection />

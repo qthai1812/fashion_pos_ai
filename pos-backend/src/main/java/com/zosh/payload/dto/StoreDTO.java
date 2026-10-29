@@ -23,5 +23,7 @@ public class StoreDTO {
 
     private StoreStatus status;
 
+    private Double commissionRate;
+
     private StoreContact contact;
 }

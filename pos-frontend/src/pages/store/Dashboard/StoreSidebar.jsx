@@ -81,12 +81,13 @@ const navLinks = [
   },
 ];
 
-export default function StoreSidebar() {
+export default function StoreSidebar({ onNavigate }) {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const handleLogout = () => {
+    onNavigate?.();
     dispatch(logout());
     navigate("/auth/login");
   };
@@ -103,6 +104,7 @@ export default function StoreSidebar() {
             <li key={link.name}>
               <Link
                 to={link.path}
+                onClick={() => onNavigate?.()}
                 className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-base font-medium group ${
                   location.pathname.startsWith(link.path)
                     ? "bg-sidebar-accent text-sidebar-accent-foreground shadow"

@@ -21,6 +21,11 @@ public class CouponController {
         return ResponseEntity.ok(couponService.createCoupon(couponDTO));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<CouponDTO> getCouponById(@PathVariable Long id) throws Exception {
+        return ResponseEntity.ok(couponService.getCouponById(id));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<CouponDTO> updateCoupon(@PathVariable Long id, @RequestBody CouponDTO couponDTO) throws Exception {
         return ResponseEntity.ok(couponService.updateCoupon(id, couponDTO));

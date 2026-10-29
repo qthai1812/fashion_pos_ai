@@ -37,7 +37,12 @@ public class Product {
 
     private String brand;
 
+    private String color;
+
     private String image;
+
+    @Transient
+    private Integer quantity;
 
     @ManyToOne
     @JoinColumn(name = "category_id")

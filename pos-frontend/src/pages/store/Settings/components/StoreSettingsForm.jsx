@@ -21,14 +21,20 @@ import {
 } from "./validation";
 import { transformSettingsToApiFormat } from "./formUtils";
 
-const StoreSettingsForm = ({ initialValues, onSubmit, isSubmitting, storeId }) => {
+const StoreSettingsForm = ({ initialValues, onSubmit, onChange, isSubmitting }) => {
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
       // Transform settings data to API format
       const apiData = transformSettingsToApiFormat(values);
-      
+
+      if (onChange) {
+        Object.entries(values).forEach(([key, val]) => {
+          onChange(key, val);
+        });
+      }
+
       // Call the onSubmit function with the transformed data
-      await onSubmit(apiData, { setSubmitting, resetForm });
+      await onSubmit(apiData, { setSubmitting, resetForm }, values);
     } catch (error) {
       console.error('Error submitting form:', error);
       setSubmitting(false);
@@ -42,7 +48,14 @@ const StoreSettingsForm = ({ initialValues, onSubmit, isSubmitting, storeId }) =
       onSubmit={handleSubmit}
       enableReinitialize
     >
-      {({ isSubmitting: formikSubmitting, errors, touched }) => (
+      {({ isSubmitting: formikSubmitting, errors, touched, handleChange }) => {
+        const handleFieldChange = (e) => {
+          handleChange(e);
+          if (onChange && e.target?.name) {
+            onChange(e.target.name, e.target.value);
+          }
+        };
+        return (
         <Form className="space-y-6">
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -52,6 +65,7 @@ const StoreSettingsForm = ({ initialValues, onSubmit, isSubmitting, storeId }) =
                   as={Input}
                   id="storeName"
                   name="storeName"
+                  onChange={handleFieldChange}
                   placeholder="Enter store name"
                   className={errors.storeName && touched.storeName ? "border-red-500" : ""}
                 />
@@ -65,6 +79,7 @@ const StoreSettingsForm = ({ initialValues, onSubmit, isSubmitting, storeId }) =
                   id="storeEmail"
                   name="storeEmail"
                   type="email"
+                  onChange={handleFieldChange}
                   placeholder="Enter store email"
                   className={errors.storeEmail && touched.storeEmail ? "border-red-500" : ""}
                 />
@@ -77,6 +92,7 @@ const StoreSettingsForm = ({ initialValues, onSubmit, isSubmitting, storeId }) =
                   as={Input}
                   id="storePhone"
                   name="storePhone"
+                  onChange={handleFieldChange}
                   placeholder="Enter store phone"
                   className={errors.storePhone && touched.storePhone ? "border-red-500" : ""}
                 />
@@ -89,7 +105,10 @@ const StoreSettingsForm = ({ initialValues, onSubmit, isSubmitting, storeId }) =
                   {({ field, form }) => (
                     <Select
                       value={field.value}
-                      onValueChange={(value) => form.setFieldValue(field.name, value)}
+                      onValueChange={(value) => {
+                        form.setFieldValue(field.name, value);
+                        onChange?.(field.name, value);
+                      }}
                     >
                       <SelectTrigger 
                         className={`w-full ${
@@ -119,6 +138,7 @@ const StoreSettingsForm = ({ initialValues, onSubmit, isSubmitting, storeId }) =
                   name="taxRate"
                   type="number"
                   step="0.01"
+                  onChange={handleFieldChange}
                   placeholder="Enter tax rate"
                   className={errors.taxRate && touched.taxRate ? "border-red-500" : ""}
                 />
@@ -131,7 +151,10 @@ const StoreSettingsForm = ({ initialValues, onSubmit, isSubmitting, storeId }) =
                   {({ field, form }) => (
                     <Select
                       value={field.value}
-                      onValueChange={(value) => form.setFieldValue(field.name, value)}
+                      onValueChange={(value) => {
+                        form.setFieldValue(field.name, value);
+                        onChange?.(field.name, value);
+                      }}
                     >
                       <SelectTrigger 
                         className={`w-full ${
@@ -161,6 +184,7 @@ const StoreSettingsForm = ({ initialValues, onSubmit, isSubmitting, storeId }) =
                 as={Input}
                 id="storeAddress"
                 name="storeAddress"
+                onChange={handleFieldChange}
                 placeholder="Enter store address"
                 className={errors.storeAddress && touched.storeAddress ? "border-red-500" : ""}
               />
@@ -173,6 +197,7 @@ const StoreSettingsForm = ({ initialValues, onSubmit, isSubmitting, storeId }) =
                 as={Textarea}
                 id="storeDescription"
                 name="storeDescription"
+                onChange={handleFieldChange}
                 placeholder="Enter store description"
                 rows={3}
                 className={errors.storeDescription && touched.storeDescription ? "border-red-500" : ""}
@@ -195,7 +220,8 @@ const StoreSettingsForm = ({ initialValues, onSubmit, isSubmitting, storeId }) =
             </Button>
           </div>
         </Form>
-      )}
+        );
+      }}
     </Formik>
   );
 };

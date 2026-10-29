@@ -19,10 +19,11 @@ public class StoreMapper {
         storeDTO.setCreatedAt(store.getCreatedAt());
         storeDTO.setUpdatedAt(store.getUpdatedAt());
         storeDTO.setStatus(store.getStatus());
+        storeDTO.setCommissionRate(store.getCommissionRate() != null ? store.getCommissionRate() : 2.5);
         return storeDTO;
     }
 
-    public static Store toEntity(StoreDTO storeDTO, User storeAdmin){
+    public static Store toEntity(StoreDTO storeDTO, User storeAdmin) {
         Store store = new Store();
         store.setId(storeDTO.getId());
         store.setBrand(storeDTO.getBrand());
@@ -30,9 +31,10 @@ public class StoreMapper {
         store.setStoreAdmin(storeAdmin);
         store.setStoreType(storeDTO.getStoreType());
         store.setContact(storeDTO.getContact());
-//        store.setCreatedAt(storeDTO.getCreatedAt());
-//        store.setUpdatedAt(storeDTO.getUpdatedAt());
-
+        store.setCommissionRate(storeDTO.getCommissionRate() != null ? storeDTO.getCommissionRate() : 2.5);
+        if (storeDTO.getStatus() != null) {
+            store.setStatus(storeDTO.getStatus());
+        }
         return store;
     }
 }

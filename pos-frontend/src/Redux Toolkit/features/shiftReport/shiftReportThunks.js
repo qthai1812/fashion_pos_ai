@@ -27,13 +27,16 @@ export const startShift = createAsyncThunk(
       console.log('🔄 Starting shift...', { branchId });
       
       const headers = getAuthHeaders();
-      const res = await api.post(`/api/shift-reports/start?branchId=${branchId}`, {}, { headers });
+      const url = branchId
+        ? `/api/shift-reports/start?branchId=${branchId}`
+        : '/api/shift-reports/start';
+      const res = await api.post(url, {}, { headers });
       
       console.log('✅ Shift started successfully:', {
         shiftId: res.data.id,
         cashierId: res.data.cashierId,
         branchId: res.data.branchId,
-        startTime: res.data.startTime,
+        startTime: res.data.shiftStart,
         response: res.data
       });
       
@@ -63,7 +66,7 @@ export const endShift = createAsyncThunk(
       
       console.log('✅ Shift ended successfully:', {
         shiftId: res.data.id,
-        endTime: res.data.endTime,
+        endTime: res.data.shiftEnd,
         totalSales: res.data.totalSales,
         totalOrders: res.data.totalOrders,
         response: res.data
@@ -94,7 +97,7 @@ export const getCurrentShiftProgress = createAsyncThunk(
       
       console.log('✅ Current shift progress fetched successfully:', {
         shiftId: res.data.id,
-        startTime: res.data.startTime,
+        startTime: res.data.shiftStart,
         totalSales: res.data.totalSales,
         totalOrders: res.data.totalOrders,
         response: res.data
@@ -131,7 +134,7 @@ export const getShiftReportByDate = createAsyncThunk(
       console.log('✅ Shift report by date fetched successfully:', {
         shiftId: res.data.id,
         cashierId: res.data.cashierId,
-        date: res.data.startTime,
+        date: res.data.shiftStart,
         response: res.data
       });
       
@@ -165,8 +168,8 @@ export const getShiftsByCashier = createAsyncThunk(
         shiftCount: res.data.length,
         shifts: res.data.map(shift => ({
           id: shift.id,
-          startTime: shift.startTime,
-          endTime: shift.endTime,
+          startTime: shift.shiftStart,
+          endTime: shift.shiftEnd,
           totalSales: shift.totalSales
         }))
       });
@@ -202,8 +205,8 @@ export const getShiftsByBranch = createAsyncThunk(
         shifts: res.data.map(shift => ({
           id: shift.id,
           cashierId: shift.cashierId,
-          startTime: shift.startTime,
-          endTime: shift.endTime,
+          startTime: shift.shiftStart,
+          endTime: shift.shiftEnd,
           totalSales: shift.totalSales
         }))
       });
@@ -239,8 +242,8 @@ export const getAllShifts = createAsyncThunk(
           id: shift.id,
           cashierId: shift.cashierId,
           branchId: shift.branchId,
-          startTime: shift.startTime,
-          endTime: shift.endTime,
+          startTime: shift.shiftStart,
+          endTime: shift.shiftEnd,
           totalSales: shift.totalSales
         }))
       });
@@ -272,8 +275,8 @@ export const getShiftById = createAsyncThunk(
         shiftId: res.data.id,
         cashierId: res.data.cashierId,
         branchId: res.data.branchId,
-        startTime: res.data.startTime,
-        endTime: res.data.endTime,
+        startTime: res.data.shiftStart,
+        endTime: res.data.shiftEnd,
         totalSales: res.data.totalSales,
         response: res.data
       });

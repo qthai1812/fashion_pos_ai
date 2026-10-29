@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -16,7 +17,7 @@ import java.util.Set;
 @Service
 public class JwtProvider {
 
-    static SecretKey key = Keys.hmacShaKeyFor(JwtConstant.JWT_SECRET.getBytes());
+    static SecretKey key = Keys.hmacShaKeyFor(JwtConstant.JWT_SECRET.getBytes(StandardCharsets.UTF_8));
 
     public String generateToken(Authentication authentication) {
         Collection<? extends GrantedAuthority> authorities =
@@ -25,7 +26,7 @@ public class JwtProvider {
         String roles = populateAuthorities(authorities);
         return Jwts.builder()
                 .issuedAt(new Date())
-                .expiration(new Date(new Date().getTime()+86400000))
+                .expiration(new Date(new Date().getTime() + 86400000))
                 .claim("email", authentication.getName())
                 .claim("authorities", roles)
                 .signWith(key)
@@ -33,22 +34,33 @@ public class JwtProvider {
     }
 
     public String getEmailFromToken(String jwt) {
-        if (jwt != null && jwt.startsWith("Bearer ")) {
+        if (jwt == null || jwt.trim().isEmpty()) {
+            return null;
+        }
+        if (jwt.startsWith("Bearer ")) {
             jwt = jwt.substring(7).trim();
         }
-        Claims claims = Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(jwt)
-                .getPayload();
+        if (jwt.isEmpty()) {
+            return null;
+        }
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(jwt)
+                    .getPayload();
 
-        return String.valueOf(claims.get("email"));
+            Object email = claims.get("email");
+            return email != null ? String.valueOf(email) : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String populateAuthorities(Collection<? extends GrantedAuthority> authorities) {
 
         Set<String> auths = new HashSet<>();
-        for(GrantedAuthority authority : authorities) {
+        for (GrantedAuthority authority : authorities) {
             auths.add(authority.getAuthority());
         }
         return String.join(",", auths);

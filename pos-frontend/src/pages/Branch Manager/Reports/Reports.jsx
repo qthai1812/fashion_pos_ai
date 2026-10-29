@@ -111,12 +111,7 @@ const Reports = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount || 0);
+    return `đ${Number(amount || 0).toLocaleString("vi-VN")}`;
   };
 
   const handleExport = (type) => {

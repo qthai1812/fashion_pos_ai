@@ -30,6 +30,7 @@ import {
   moderateStore,
 } from "../../../Redux Toolkit/features/store/storeThunks";
 import { formatDateTime } from "../../../utils/formateDate";
+import { toast as sonnerToast } from "sonner";
 
 export default function StoreTable({
   onViewDetails,
@@ -64,9 +65,27 @@ export default function StoreTable({
   const handleStatusChange = async (storeId, newStatus) => {
     setUpdatingId(storeId);
     try {
-      await dispatch(moderateStore({ storeId, action: newStatus })).unwrap();
-    } catch (e) {
-      // Handled by slice error
+      const updated = await dispatch(
+        moderateStore({ storeId, action: newStatus })
+      ).unwrap();
+      const brandName = updated?.brand || "Store";
+      if (newStatus === "ACTIVE") {
+        sonnerToast.success(
+          `${brandName} is now ACTIVE. Store Admin, Branch Managers, and Cashiers can access the system.`
+        );
+      } else if (newStatus === "PENDING") {
+        sonnerToast.info(
+          `${brandName} is now PENDING. All store and branch accounts are waiting for approval.`
+        );
+      } else if (newStatus === "BLOCKED") {
+        sonnerToast.warning(
+          `${brandName} has been BLOCKED. All store and branch accounts are now suspended.`
+        );
+      }
+    } catch (err) {
+      sonnerToast.error(
+        typeof err === "string" ? err : "Failed to update store status"
+      );
     } finally {
       setUpdatingId(null);
     }

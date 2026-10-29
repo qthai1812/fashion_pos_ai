@@ -49,7 +49,7 @@ const SystemSettingsForm = ({ systemSettings, onToggle }) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {systemSettingItems.map((item, index) => (
+        {systemSettingItems.map((item) => (
           <React.Fragment key={item.id}>
             <SystemSettingItem
               id={item.id}

@@ -35,6 +35,8 @@ public class Store {
     @Enumerated(EnumType.STRING)
     private StoreStatus status;
 
+    private Double commissionRate = 2.5;
+
     @Embedded
     private StoreContact contact = new StoreContact();
 
@@ -43,6 +45,9 @@ public class Store {
         createdAt = LocalDateTime.now();
         if (status == null) {
             status = StoreStatus.PENDING;
+        }
+        if (commissionRate == null) {
+            commissionRate = 2.5;
         }
     }
 

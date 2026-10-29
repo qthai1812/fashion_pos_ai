@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
@@ -32,13 +32,8 @@ const SalesTrend = () => {
   const { userProfile } = useSelector((state) => state.user);
   const [period, setPeriod] = useState("daily");
 
-  useEffect(() => {
-    if (userProfile?.id) {
-      fetchSalesData();
-    }
-  }, [userProfile, period]);
-
-  const fetchSalesData = async () => {
+  const fetchSalesData = useCallback(async () => {
+    if (!userProfile?.id) return;
     try {
       if (period === "daily") {
         await dispatch(getDailySales(userProfile.id)).unwrap();
@@ -54,15 +49,16 @@ const SalesTrend = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [dispatch, period, toast, userProfile?.id]);
+
+  useEffect(() => {
+    if (userProfile?.id) {
+      fetchSalesData();
+    }
+  }, [fetchSalesData, userProfile?.id]);
 
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value || 0);
+    return `đ${Number(value || 0).toLocaleString("vi-VN")}`;
   };
 
   // Mapped to Backend DailySalesDTO ({ date, totalSales, totalOrders }) & SalesTrendDTO ({ period, totalSales })

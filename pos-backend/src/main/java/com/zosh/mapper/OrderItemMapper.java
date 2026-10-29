@@ -6,14 +6,13 @@ import com.zosh.payload.dto.OrderItemDTO;
 public class OrderItemMapper {
 
     public static OrderItemDTO toDTO(OrderItem item) {
-        if(item == null) return null;
+        if (item == null) return null;
         return OrderItemDTO.builder()
                 .id(item.getId())
-                .productId(item.getProduct().getId())
-
+                .productId(item.getProduct() != null ? item.getProduct().getId() : null)
                 .quantity(item.getQuantity())
                 .price(item.getPrice())
-                .product(ProductMapper.toDTO(item.getProduct()))
+                .product(item.getProduct() != null ? ProductMapper.toDTO(item.getProduct()) : null)
                 .build();
     }
 }

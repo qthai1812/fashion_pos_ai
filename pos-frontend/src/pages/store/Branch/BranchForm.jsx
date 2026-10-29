@@ -15,8 +15,10 @@ const BranchForm = ({ initialValues, onSubmit, onCancel, isEditing }) => {
   const validationSchema = Yup.object({
     name: Yup.string().required("Branch Name is required"),
     address: Yup.string().required("Address is required"),
-    managerName: Yup.string().required("Manager Name is required"),
+    email: Yup.string().email("Invalid email address").optional(),
     phone: Yup.string().required("Phone Number is required"),
+    openTime: Yup.string().optional(),
+    closeTime: Yup.string().optional(),
   });
 
   const handleSubmit = async (values, { setSubmitting }) => {
@@ -33,7 +35,12 @@ const BranchForm = ({ initialValues, onSubmit, onCancel, isEditing }) => {
       }
 
       const branchData = {
-        ...values,
+        name: values.name,
+        address: values.address,
+        email: values.email || undefined,
+        phone: values.phone,
+        openTime: values.openTime || undefined,
+        closeTime: values.closeTime || undefined,
         storeId: store.id,
       };
 
@@ -48,7 +55,7 @@ const BranchForm = ({ initialValues, onSubmit, onCancel, isEditing }) => {
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || `Failed to ${isEditing ? "update" : "create"} branch`,
+        description: error?.message || error || `Failed to ${isEditing ? "update" : "create"} branch`,
         variant: "destructive",
       });
     } finally {
@@ -58,7 +65,14 @@ const BranchForm = ({ initialValues, onSubmit, onCancel, isEditing }) => {
 
   return (
     <Formik
-      initialValues={initialValues || { name: "", address: "", managerName: "", phone: "" }}
+      initialValues={{
+        name: initialValues?.name || "",
+        address: initialValues?.address || "",
+        email: initialValues?.email || "",
+        phone: initialValues?.phone || "",
+        openTime: initialValues?.openTime || "08:00",
+        closeTime: initialValues?.closeTime || "22:00",
+      }}
       validationSchema={validationSchema}
       onSubmit={handleSubmit}
       enableReinitialize
@@ -88,14 +102,15 @@ const BranchForm = ({ initialValues, onSubmit, onCancel, isEditing }) => {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="managerName">Manager Name</label>
+            <label htmlFor="email">Branch Email (Optional)</label>
             <Field
               as={Input}
-              id="managerName"
-              name="managerName"
-              placeholder="Enter manager name"
+              id="email"
+              name="email"
+              type="email"
+              placeholder="Enter branch email"
             />
-            <ErrorMessage name="managerName" component="div" className="text-red-500 text-sm" />
+            <ErrorMessage name="email" component="div" className="text-red-500 text-sm" />
           </div>
 
           <div className="space-y-2">
@@ -107,6 +122,27 @@ const BranchForm = ({ initialValues, onSubmit, onCancel, isEditing }) => {
               placeholder="Enter phone number"
             />
             <ErrorMessage name="phone" component="div" className="text-red-500 text-sm" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="openTime">Open Time</label>
+              <Field
+                as={Input}
+                id="openTime"
+                name="openTime"
+                type="time"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="closeTime">Close Time</label>
+              <Field
+                as={Input}
+                id="closeTime"
+                name="closeTime"
+                type="time"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

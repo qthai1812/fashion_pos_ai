@@ -39,8 +39,9 @@ public class BranchAnalyticsController {
     @GetMapping("/category-sales")
     public ResponseEntity<List<CategorySalesDTO>> getCategoryWiseSalesBreakdown(
             @RequestParam Long branchId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(branchAnalyticsService.getCategoryWiseSalesBreakdown(branchId, date));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        LocalDate targetDate = date != null ? date : LocalDate.now();
+        return ResponseEntity.ok(branchAnalyticsService.getCategoryWiseSalesBreakdown(branchId, targetDate));
     }
 
     @GetMapping("/today-overview")
@@ -52,7 +53,8 @@ public class BranchAnalyticsController {
     @GetMapping("/payment-breakdown")
     public ResponseEntity<List<PaymentBreakdownDTO>> getPaymentBreakdown(
             @RequestParam Long branchId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(branchAnalyticsService.getPaymentBreakdown(branchId, date));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        LocalDate targetDate = date != null ? date : LocalDate.now();
+        return ResponseEntity.ok(branchAnalyticsService.getPaymentBreakdown(branchId, targetDate));
     }
 }

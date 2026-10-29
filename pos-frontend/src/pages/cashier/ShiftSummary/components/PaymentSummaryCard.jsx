@@ -1,7 +1,6 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { getPaymentIcon } from "../../../../utils/getPaymentIcon";
-import { getPaymentMethodLabel } from "../../../../utils/paymentMethodLable";
 
 const PaymentSummaryCard = ({ shiftData }) => {
   return (
@@ -25,9 +24,10 @@ const PaymentSummaryCard = ({ shiftData }) => {
                   <span>{payment.transactionCount} transactions</span>
                   <span>
                     {(
-                      (payment.totalAmount / shiftData.totalSales) *
-                      100
-                    )?.toFixed(1)}
+                      shiftData.totalSales > 0
+                        ? (payment.totalAmount / shiftData.totalSales) * 100
+                        : payment.percentage || 0
+                    ).toFixed(1)}
                     %
                   </span>
                 </div>

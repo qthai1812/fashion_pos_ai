@@ -24,8 +24,71 @@ export const login = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     console.log("Credentials:", credentials);
     try {
+      // Clean up legacy key that allowed self-lockout
+      localStorage.removeItem("pos_employee_access_overrides");
+
+      const savedOverrides = localStorage.getItem("pos_disabled_employees_v2");
+      if (savedOverrides && credentials?.email) {
+        try {
+          const parsed = JSON.parse(savedOverrides);
+          if (parsed[credentials.email.trim().toLowerCase()] === false) {
+            return rejectWithValue(
+              "Login access for this account has been disabled by your manager.",
+            );
+          }
+        } catch {
+          // ignore malformed localStorage
+        }
+      }
+
       const res = await api.post("/auth/login", credentials);
       const data = res.data;
+      if (data?.user?.loginAccess === false) {
+        return rejectWithValue(
+          "Login access for this account has been disabled by your manager.",
+        );
+      }
+
+      // Check store status for all non-Super-Admin users (Store Admin, Store Manager, Branch Manager, Cashier)
+      if (data?.jwt && data?.user?.role && data.user.role !== "ROLE_ADMIN") {
+        try {
+          const authHeader = { Authorization: `Bearer ${data.jwt}` };
+          let storeData = null;
+          if (data.user.role === "ROLE_STORE_ADMIN") {
+            const storeRes = await api.get("/api/stores/admin", {
+              headers: authHeader,
+            });
+            storeData = storeRes.data;
+          } else {
+            try {
+              const storeRes = await api.get("/api/stores/employee", {
+                headers: authHeader,
+              });
+              storeData = storeRes.data;
+            } catch {
+              if (data.user.storeId) {
+                const storeRes = await api.get(
+                  `/api/stores/${data.user.storeId}`,
+                  { headers: authHeader },
+                );
+                storeData = storeRes.data;
+              }
+            }
+          }
+
+          const storeStatus = storeData?.status?.toUpperCase();
+          if (storeStatus === "BLOCKED") {
+            localStorage.removeItem("jwt");
+            localStorage.removeItem("token");
+            return rejectWithValue(
+              `Store "${storeData?.brand || "your store"}" has been BLOCKED by Super Admin. Access is suspended for all accounts in this store.`,
+            );
+          }
+        } catch {
+          // If user has no store yet (e.g. new Store Admin before onboarding), proceed normally
+        }
+      }
+
       console.log("Login success:", data);
       localStorage.setItem("jwt", data.jwt);
       // Optional: Save token to localStorage

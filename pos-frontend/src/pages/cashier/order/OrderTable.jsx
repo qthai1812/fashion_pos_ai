@@ -1,5 +1,5 @@
 import React from "react";
-import { formatDate, getPaymentModeLabel, getStatusBadgeVariant } from "./data";
+import { formatDate, getStatusBadgeVariant } from "./data";
 import {
   Table,
   TableBody,

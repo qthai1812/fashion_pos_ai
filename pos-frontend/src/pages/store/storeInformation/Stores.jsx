@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/use-toast";
 import {
   getStoreByAdmin,
+  getStoreByEmployee,
   updateStore,
 } from "@/Redux Toolkit/features/store/storeThunks";
 import {
@@ -24,22 +25,14 @@ export default function Stores() {
   const [storeData, setStoreData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (store?.id) {
-      fetchStoreData();
-    }
-  }, [dispatch, userProfile]);
-
-  useEffect(() => {
-    if (store) {
-      setStoreData(store);
-    }
-  }, [store]);
-
-  const fetchStoreData = async () => {
+  const fetchStoreData = useCallback(async () => {
     setRefreshing(true);
     try {
-      await dispatch(getStoreByAdmin()).unwrap();
+      if (userProfile?.role === "ROLE_STORE_MANAGER") {
+        await dispatch(getStoreByEmployee()).unwrap();
+      } else {
+        await dispatch(getStoreByAdmin()).unwrap();
+      }
     } catch (err) {
       toast({
         title: "Error",
@@ -49,7 +42,19 @@ export default function Stores() {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [dispatch, userProfile?.role]);
+
+  useEffect(() => {
+    if (store?.id) {
+      fetchStoreData();
+    }
+  }, [fetchStoreData, store?.id]);
+
+  useEffect(() => {
+    if (store) {
+      setStoreData(store);
+    }
+  }, [store]);
 
   const handleEditStore = async (values, { setSubmitting, resetForm }) => {
     try {

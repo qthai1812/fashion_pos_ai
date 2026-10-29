@@ -13,6 +13,7 @@ import com.zosh.repository.PasswordResetTokenRepository;
 import com.zosh.repository.UserRepository;
 import com.zosh.service.AuthService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -20,6 +21,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -44,7 +47,17 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AuthResponse signup(UserDto userDto) throws UserException {
-        User user = userRepository.findByEmail(userDto.getEmail());
+        if (userDto == null || userDto.getEmail() == null || userDto.getEmail().trim().isEmpty()) {
+            throw new UserException("Email is required");
+        }
+        if (userDto.getPassword() == null || userDto.getPassword().trim().isEmpty()) {
+            throw new UserException("Password is required");
+        }
+        if (userDto.getFullName() == null || userDto.getFullName().trim().isEmpty()) {
+            throw new UserException("Full name is required");
+        }
+
+        User user = userRepository.findByEmail(userDto.getEmail().trim());
         if (user != null) {
             throw new UserException("email id already registered");
         }
@@ -56,10 +69,10 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User newUser = new User();
-        newUser.setEmail(userDto.getEmail());
+        newUser.setEmail(userDto.getEmail().trim());
         newUser.setPassword(passwordEncoder.encode(userDto.getPassword()));
         newUser.setRole(assignedRole);
-        newUser.setFullName(userDto.getFullName());
+        newUser.setFullName(userDto.getFullName().trim());
         newUser.setPhone(userDto.getPhone());
         newUser.setLastLogin(LocalDateTime.now());
         newUser.setCreatedAt(LocalDateTime.now());
@@ -85,13 +98,33 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AuthResponse login(UserDto userDto) throws UserException {
-        String email = userDto.getEmail();
+        if (userDto == null || userDto.getEmail() == null || userDto.getPassword() == null) {
+            throw new UserException("Email and password are required");
+        }
+        String email = userDto.getEmail().trim();
         String password = userDto.getPassword();
         Authentication authentication = authenticate(email, password);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        String jwt = jwtProvider.generateToken(authentication);
         User user = userRepository.findByEmail(email);
+        if (user != null && Boolean.FALSE.equals(user.getLoginAccess())) {
+            SecurityContextHolder.clearContext();
+            throw new UserException("Login access for this account has been disabled by your manager.");
+        }
+        if (user != null && user.getRole() != UserRole.ROLE_ADMIN) {
+            com.zosh.modal.Store effectiveStore = user.getStore();
+            if (effectiveStore == null && user.getBranch() != null) {
+                effectiveStore = user.getBranch().getStore();
+            }
+            if (effectiveStore != null && effectiveStore.getStatus() == com.zosh.domain.StoreStatus.BLOCKED) {
+                SecurityContextHolder.clearContext();
+                throw new UserException(
+                        "Store \"" + effectiveStore.getBrand() + "\" has been BLOCKED by Super Admin. Access is suspended for all accounts in this store."
+                );
+            }
+        }
+
+        String jwt = jwtProvider.generateToken(authentication);
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
@@ -106,7 +139,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse forgotPassword(String email) throws Exception {
-        User user = userRepository.findByEmail(email);
+        if (email == null || email.trim().isEmpty()) {
+            throw new UserException("Email is required");
+        }
+        User user = userRepository.findByEmail(email.trim());
         if (user == null) {
             throw new Exception("No account found with email: " + email);
         }
@@ -123,18 +159,22 @@ public class AuthServiceImpl implements AuthService {
         passwordResetTokenRepository.save(resetToken);
 
         String resetLink = frontendUrl + "/auth/reset-password?token=" + tokenValue;
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email);
-        message.setSubject("POS Pro — Password Reset Request");
-        message.setText(
-                "Hello " + user.getFullName() + ",\n\n" +
-                "We received a request to reset your password.\n\n" +
-                "Click the link below to reset it (valid for 1 hour):\n" +
-                resetLink + "\n\n" +
-                "If you did not request a password reset, please ignore this email.\n\n" +
-                "Best regards,\nPOS Pro Team"
-        );
-        mailSender.send(message);
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email.trim());
+            message.setSubject("POS Pro — Password Reset Request");
+            message.setText(
+                    "Hello " + user.getFullName() + ",\n\n" +
+                    "We received a request to reset your password.\n\n" +
+                    "Click the link below to reset it (valid for 1 hour):\n" +
+                    resetLink + "\n\n" +
+                    "If you did not request a password reset, please ignore this email.\n\n" +
+                    "Best regards,\nPOS Pro Team"
+            );
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.warn("Could not send password reset email to {} (reset link: {}): {}", email, resetLink, e.getMessage());
+        }
 
         ApiResponse response = new ApiResponse();
         response.setMessage("Password reset link sent to " + email);
@@ -144,6 +184,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse resetPassword(String token, String newPassword) throws Exception {
+        if (newPassword == null || newPassword.trim().length() < 6) {
+            throw new UserException("New password must be at least 6 characters");
+        }
         PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
                 .orElseThrow(() -> new Exception("Invalid or expired reset token"));
 
@@ -168,7 +211,12 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private Authentication authenticate(String email, String password) throws UserException {
-        UserDetails userDetails = customUserImplementation.loadUserByUsername(email);
+        UserDetails userDetails;
+        try {
+            userDetails = customUserImplementation.loadUserByUsername(email);
+        } catch (UsernameNotFoundException e) {
+            throw new UserException("email id doesn't exist " + email);
+        }
         if (userDetails == null) {
             throw new UserException("email id doesn't exist " + email);
         }

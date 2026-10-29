@@ -1,7 +1,6 @@
 package com.zosh.repository;
 
 import com.zosh.modal.Refund;
-import com.zosh.modal.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
@@ -10,6 +9,9 @@ import java.util.List;
 public interface RefundRepository extends JpaRepository<Refund, Long> {
 
     boolean existsByOrderId(Long orderId);
+
+    List<Refund> findByOrderId(Long orderId);
+
     List<Refund> findByCashierIdAndCreatedAtBetween(
             Long cashier,
             LocalDateTime from,
@@ -17,7 +19,8 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
     );
 
     List<Refund> findByCashierId(Long id);
-    List<Refund> findByShiftReportId(Long id);
-    List<Refund> findByBranchId(Long id);
 
+    List<Refund> findByShiftReportId(Long id);
+
+    List<Refund> findByBranchId(Long id);
 }

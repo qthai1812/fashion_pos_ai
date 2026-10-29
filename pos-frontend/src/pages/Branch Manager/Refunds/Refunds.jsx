@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -7,15 +7,8 @@ import {
   TableHeader,
   TableRow,
 } from "../../../components/ui/table";
-import { Button } from "../../../components/ui/button";
-import { Edit } from "lucide-react";
-import { useDispatch } from "react-redux";
-import { useEffect } from "react";
-import { useSelector } from "react-redux";
-import {
-  getAllRefunds,
-  getRefundsByBranch,
-} from "../../../Redux Toolkit/features/refund/refundThunks";
+import { useDispatch, useSelector } from "react-redux";
+import { getRefundsByBranch } from "../../../Redux Toolkit/features/refund/refundThunks";
 
 const Refunds = () => {
   const dispatch = useDispatch();
@@ -23,10 +16,9 @@ const Refunds = () => {
   const refunds = useSelector((store) => store.refund.refundsByBranch);
 
   useEffect(() => {
-    if (branch) dispatch(getRefundsByBranch(branch?.id));
-  }, [branch]);
+    if (branch?.id) dispatch(getRefundsByBranch(branch.id));
+  }, [branch, dispatch]);
 
-  console.log("refund s", refunds);
   return (
     <>
       <h1 className="font-bold text-2xl pb-5">Refund Spike</h1>
@@ -49,14 +41,14 @@ const Refunds = () => {
                   #ORD-{refund.orderId}
                 </TableCell>
 
-                <TableCell>đ{refund.amount || 499}</TableCell>
+                <TableCell>đ{(refund.amount ?? 0).toLocaleString()}</TableCell>
                 <TableCell className="text-right">{refund.reason}</TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-4 text-gray-500">
-                No inventory found matching your criteria
+              <TableCell colSpan={4} className="text-center py-4 text-gray-500">
+                No refunds found matching your criteria
               </TableCell>
             </TableRow>
           )}

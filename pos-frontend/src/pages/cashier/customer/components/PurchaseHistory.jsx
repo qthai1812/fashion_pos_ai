@@ -65,9 +65,9 @@ const PurchaseHistory = ({ orders, loading = false }) => {
                   </div>
                 </div>
 
-                {order.paymentMethod && (
+                {(order.paymentType || order.paymentMethod) && (
                   <div className="text-sm text-muted-foreground mb-2">
-                    Payment: {order.paymentMethod}
+                    Payment: {order.paymentType || order.paymentMethod}
                   </div>
                 )}
 
@@ -75,22 +75,27 @@ const PurchaseHistory = ({ orders, loading = false }) => {
                   <div className="border-t pt-3">
                     <h4 className="text-sm font-medium mb-2">Items:</h4>
                     <div className="space-y-1">
-                      {order.items.map((item, index) => (
-                        <div
-                          key={index}
-                          className="flex justify-between text-sm"
-                        >
-                          <span>
-                            {item.product.name ||
-                              item.productName ||
-                              "Unknown Product"}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {item.quantity || 1} × đ
-                            {(item.price || 0).toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
+                      {order.items.map((item, index) => {
+                        const unitPrice =
+                          item.product?.sellingPrice ??
+                          (item.price || 0) / (item.quantity || 1);
+                        return (
+                          <div
+                            key={index}
+                            className="flex justify-between text-sm"
+                          >
+                            <span>
+                              {item.product?.name ||
+                                item.productName ||
+                                "Product"}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {item.quantity || 1} × đ
+                              {Number(unitPrice || 0).toFixed(2)}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

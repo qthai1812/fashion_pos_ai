@@ -10,6 +10,7 @@ public interface OrderService {
 
     OrderDTO createOrder(OrderDTO orderDTO) throws Exception;
     OrderDTO getOrderById(Long id) throws Exception;
+    OrderDTO updateOrderStatus(Long id, OrderStatus status) throws Exception;
     List<OrderDTO> getOrdersByBranch(Long branchId,
                                      Long customerId,
                                      Long cashierId,

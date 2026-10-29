@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -31,13 +31,8 @@ export default function Sales() {
   const { storeOverview, dailySales, salesByPaymentMethod, loading } =
     useSelector((state) => state.storeAnalytics);
 
-  useEffect(() => {
-    if (userProfile?.id) {
-      fetchSalesData();
-    }
-  }, [userProfile]);
-
-  const fetchSalesData = async () => {
+  const fetchSalesData = useCallback(async () => {
+    if (!userProfile?.id) return;
     try {
       await Promise.all([
         dispatch(getStoreOverview(userProfile.id)).unwrap(),
@@ -51,7 +46,13 @@ export default function Sales() {
         variant: "destructive",
       });
     }
-  };
+  }, [dispatch, toast, userProfile?.id]);
+
+  useEffect(() => {
+    if (userProfile?.id) {
+      fetchSalesData();
+    }
+  }, [fetchSalesData, userProfile?.id]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("vi-VN", {

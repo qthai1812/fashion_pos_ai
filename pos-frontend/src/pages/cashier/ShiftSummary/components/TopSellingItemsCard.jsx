@@ -20,7 +20,7 @@ const TopSellingItemsCard = ({ shiftData }) => {
                   </span>
                 </div>
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>{item.quantity} units sold</span>
+                  <span>{item.quantity ?? 0} units sold</span>
                 </div>
               </div>
             </div>

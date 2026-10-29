@@ -44,11 +44,11 @@ const Onboarding = () => {
               } else {
                 setStep(2);
               }
-            } catch (err) {
+            } catch {
               setStep(2);
             }
           }
-        } catch (err) {
+        } catch {
           localStorage.removeItem('jwt');
         }
         setLocalLoading(false);
@@ -95,6 +95,7 @@ const Onboarding = () => {
             email: updatedFormData.email || undefined,
           },
         })).unwrap();
+        await dispatch(getUserProfile(localStorage.getItem('jwt'))).unwrap();
         navigate('/store');
       } catch (err) {
         setLocalError(err || 'Store creation failed');

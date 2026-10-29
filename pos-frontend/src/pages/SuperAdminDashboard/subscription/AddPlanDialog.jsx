@@ -234,7 +234,7 @@ const AddPlanDialog = ({ open, onOpenChange, onSuccess }) => {
         <div className="flex gap-4">
           <div className="flex-1">
             <label className="block font-medium" htmlFor="plan-price">
-              Price (₹)
+              Price (₫)
             </label>
             <Field
               as={Input}

@@ -1,6 +1,5 @@
 package com.zosh.payload.dto;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,7 +15,7 @@ public class CategoryDTO {
 
     private String name;
 
-//    private Store store;
+    private String description;
 
     private Long storeId;
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Barcode, Loader2, X } from "lucide-react";
@@ -86,7 +86,7 @@ const ProductSection = ({ searchInputRef }) => {
               jwt: localStorage.getItem("jwt"),
             }),
           ).unwrap();
-        } catch (error) {
+        } catch {
           toast({
             title: "Error",
             description: "Failed to load branch information",
@@ -99,31 +99,30 @@ const ProductSection = ({ searchInputRef }) => {
     fetchProductsAndInventory();
   }, [dispatch, branch, userProfile, toast]);
 
+  const debounceTimeoutRef = useRef(null);
+
   const debouncedSearch = useCallback(
-    (() => {
-      let timeoutId;
-      return (query) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-          if (query.trim() && branch?.storeId && localStorage.getItem("jwt")) {
-            dispatch(
-              searchProducts({
-                query: query.trim(),
-                storeId: branch.storeId,
-              }),
-            )
-              .unwrap()
-              .catch((error) => {
-                toast({
-                  title: "Search Error",
-                  description: error || "Failed to search products",
-                  variant: "destructive",
-                });
+    (query) => {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = setTimeout(() => {
+        if (query.trim() && branch?.storeId && localStorage.getItem("jwt")) {
+          dispatch(
+            searchProducts({
+              query: query.trim(),
+              storeId: branch.storeId,
+            }),
+          )
+            .unwrap()
+            .catch((error) => {
+              toast({
+                title: "Search Error",
+                description: error || "Failed to search products",
+                variant: "destructive",
               });
-          }
-        }, 350);
-      };
-    })(),
+            });
+        }
+      }, 350);
+    },
     [dispatch, branch, toast],
   );
 

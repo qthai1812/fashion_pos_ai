@@ -87,7 +87,7 @@ const ProductDetails = ({ product }) => {
                 <div className="text-sm text-gray-500">Price</div>
                 <div className="font-medium">
                   <span className="text-lg font-bold text-emerald-700">
-                    $
+                    đ
                     {product.sellingPrice?.toFixed(2) ||
                       product.price?.toFixed(2) ||
                       "0.00"}
@@ -95,7 +95,7 @@ const ProductDetails = ({ product }) => {
                   {product.mrp &&
                     product.mrp > (product.sellingPrice || product.price) && (
                       <span className="ml-2 text-sm line-through text-gray-500">
-                        ${product.mrp.toFixed(2)}
+                        đ{product.mrp.toFixed(2)}
                       </span>
                     )}
                 </div>
@@ -105,21 +105,11 @@ const ProductDetails = ({ product }) => {
             <div className="flex items-center gap-2">
               <Package className="h-5 w-5 text-gray-500" />
               <div>
-                <div className="text-sm text-gray-500">Stock</div>
+                <div className="text-sm text-gray-500">Brand</div>
                 <div className="font-medium">
-                  {product.stock !== undefined ? (
-                    <Badge
-                      className={
-                        product.stock > 10
-                          ? "bg-green-100 text-green-800"
-                          : "bg-amber-100 text-amber-800"
-                      }
-                    >
-                      {product.stock} in stock
-                    </Badge>
-                  ) : (
-                    "N/A"
-                  )}
+                  <Badge variant="outline">
+                    {product.brand || "Standard"}
+                  </Badge>
                 </div>
               </div>
             </div>

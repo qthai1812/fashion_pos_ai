@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "@/utils/api";
+import { clearStoreState } from "../store/storeSlice";
 
 // Get user profile from JWT
 export const getUserProfile = createAsyncThunk(
@@ -83,10 +84,11 @@ export const getUserById = createAsyncThunk(
 // Logout user
 export const logout = createAsyncThunk(
   "user/logout",
-  async (_, { rejectWithValue }) => {
+  async (_, { dispatch, rejectWithValue }) => {
     try {
       localStorage.removeItem("jwt");
       localStorage.removeItem("token");
+      dispatch(clearStoreState());
       return "Logged out successfully";
     } catch (err) {
       return rejectWithValue(err.message || "Failed to logout");

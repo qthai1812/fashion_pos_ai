@@ -8,12 +8,7 @@ import com.zosh.mapper.OrderMapper;
 import com.zosh.modal.*;
 import com.zosh.payload.dto.OrderDTO;
 import com.zosh.payload.dto.OrderItemDTO;
-import com.zosh.repository.BranchRepository;
-import com.zosh.repository.CouponRepository;
-import com.zosh.repository.CustomerRepository;
-import com.zosh.repository.OrderItemRepository;
-import com.zosh.repository.OrderRepository;
-import com.zosh.repository.ProductRepository;
+import com.zosh.repository.*;
 import com.zosh.service.InventoryService;
 import com.zosh.service.OrderService;
 import com.zosh.service.UserService;
@@ -44,6 +39,7 @@ public class OrderServiceImpl implements OrderService {
     private final CouponRepository couponRepository;
     private final CustomerRepository customerRepository;
     private final InventoryService inventoryService;
+    private final RefundRepository refundRepository;
 
     private static final double VND_PER_POINT_EARNED = 10000.0;
     private static final double VND_PER_POINT_REDEEMED = 1000.0;
@@ -107,7 +103,7 @@ public class OrderServiceImpl implements OrderService {
                 .customer(customer)
                 .paymentType(orderDTO.getPaymentType())
                 .note(orderDTO.getNote())
-                .status(OrderStatus.COMPLETED)
+                .status(orderDTO.getStatus() != null ? orderDTO.getStatus() : OrderStatus.COMPLETED)
                 .build();
 
         List<Long> productIds = orderDTO.getItems().stream()
@@ -165,6 +161,9 @@ public class OrderServiceImpl implements OrderService {
                 discountAmount = pointsUsed * VND_PER_POINT_REDEEMED;
                 appliedCouponCode = "POINTS (-" + pointsUsed + " pts)";
             } else {
+                if (finalBranch.getStore() == null) {
+                    throw new Exception("Branch does not belong to a valid store to apply coupon");
+                }
                 Coupon coupon = couponRepository.findByCodeAndStoreId(
                                 code,
                                 finalBranch.getStore().getId())
@@ -254,6 +253,20 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderDTO updateOrderStatus(Long id, OrderStatus status) throws Exception {
+        if (status == null) {
+            throw new IllegalArgumentException("Order status is required");
+        }
+        Order order = orderRepository.findById(id).orElseThrow(
+                () -> new Exception("Order not found with id " + id)
+        );
+        order.setStatus(status);
+        Order saved = orderRepository.save(order);
+        return OrderMapper.toDTO(saved);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<OrderDTO> getOrdersByBranch(Long branchId,
                                             Long customerId,
@@ -289,6 +302,34 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id).orElseThrow(
                 () -> new Exception("Order not found with id " + id)
         );
+
+        List<Refund> orderRefunds = refundRepository.findByOrderId(id);
+        for (Refund r : orderRefunds) {
+            r.setOrder(null);
+            refundRepository.save(r);
+        }
+
+        if (order.getStatus() != OrderStatus.REFUNDED
+                && order.getBranch() != null
+                && order.getItems() != null) {
+            List<OrderItem> sortedItems = order.getItems().stream()
+                    .filter(i -> i.getProduct() != null && i.getProduct().getId() != null)
+                    .sorted(Comparator.comparing(i -> i.getProduct().getId()))
+                    .collect(Collectors.toList());
+            for (OrderItem item : sortedItems) {
+                try {
+                    inventoryService.restoreInventory(
+                            item.getProduct().getId(),
+                            order.getBranch().getId(),
+                            item.getQuantity()
+                    );
+                } catch (Exception e) {
+                    log.warn("Could not restore inventory for product {} when deleting order {}: {}",
+                            item.getProduct().getId(), id, e.getMessage());
+                }
+            }
+        }
+
         orderRepository.delete(order);
     }
 

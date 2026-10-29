@@ -10,7 +10,7 @@ export const StoreSettingsValidationSchema = Yup.object().shape({
     .email("Please enter a valid email address")
     .required("Store email is required"),
   storePhone: Yup.string()
-    .matches(/^[\+]?[1-9][\d]{0,15}$/, "Please enter a valid phone number")
+    .matches(/^[+]?[0-9][\d]{0,15}$/, "Please enter a valid phone number")
     .required("Store phone is required"),
   storeAddress: Yup.string()
     .min(10, "Address must be at least 10 characters")
@@ -34,6 +34,7 @@ export const StoreSettingsValidationSchema = Yup.object().shape({
 
 // Currency options
 export const CURRENCY_OPTIONS = [
+  { value: "VND", label: "VND - Vietnamese Dong" },
   { value: "USD", label: "USD - US Dollar" },
   { value: "EUR", label: "EUR - Euro" },
   { value: "GBP", label: "GBP - British Pound" },
@@ -44,6 +45,7 @@ export const CURRENCY_OPTIONS = [
 
 // Timezone options
 export const TIMEZONE_OPTIONS = [
+  { value: "Asia/Ho_Chi_Minh", label: "Vietnam Time (ICT)" },
   { value: "America/New_York", label: "Eastern Time (ET)" },
   { value: "America/Chicago", label: "Central Time (CT)" },
   { value: "America/Denver", label: "Mountain Time (MT)" },

@@ -7,6 +7,7 @@ import com.zosh.payload.dto.UserDto;
 import com.zosh.repository.UserRepository;
 import com.zosh.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public User getUserFromJwtToken(String token) throws UserException {
         String email = jwtProvider.getEmailFromToken(token);
+        if (email == null) {
+            throw new UserException("Invalid token");
+        }
         User user = userRepository.findByEmail(email);
         if (user == null) {
             throw new UserException("Invalid token");
@@ -34,7 +38,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User getCurrentUser() throws UserException {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            throw new UserException("user not found");
+        }
+        String email = authentication.getName();
         User user = userRepository.findByEmail(email);
         if (user == null) {
             throw new UserException("user not found");

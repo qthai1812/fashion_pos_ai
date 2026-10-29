@@ -8,11 +8,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
@@ -36,8 +43,8 @@ public class GlobalExceptionHandler {
         return buildResponse("You do not have permission to perform this action", HttpStatus.FORBIDDEN);
     }
 
-    @ExceptionHandler({EntityNotFoundException.class, NoSuchElementException.class})
-    public ResponseEntity<ApiResponse> handleNotFound(RuntimeException ex) {
+    @ExceptionHandler({EntityNotFoundException.class, NoSuchElementException.class, NoResourceFoundException.class})
+    public ResponseEntity<ApiResponse> handleNotFound(Exception ex) {
         return buildResponse(ex.getMessage() != null ? ex.getMessage() : "Resource not found", HttpStatus.NOT_FOUND);
     }
 
@@ -47,6 +54,28 @@ public class GlobalExceptionHandler {
                 .map(err -> err.getField() + ": " + err.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         return buildResponse(message, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler({
+            HttpMessageNotReadableException.class,
+            MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class,
+            MissingRequestHeaderException.class,
+            IllegalArgumentException.class
+    })
+    public ResponseEntity<ApiResponse> handleBadRequestExceptions(Exception ex) {
+        String message = ex.getMessage() != null ? ex.getMessage() : "Invalid request payload or parameters";
+        return buildResponse(message, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        return buildResponse(ex.getMessage() != null ? ex.getMessage() : "Request method not supported", HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
+        return buildResponse("Uploaded file exceeds the maximum allowed size (5MB)", HttpStatus.PAYLOAD_TOO_LARGE);
     }
 
     @ExceptionHandler({OptimisticLockException.class, PessimisticLockException.class})
@@ -59,11 +88,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         log.warn("Database constraint violation: {}", ex.getMessage());
         return buildResponse("Data integrity violation: duplicate or invalid reference data.", HttpStatus.CONFLICT);
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponse> handleIllegalArgument(IllegalArgumentException ex) {
-        return buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(Exception.class)

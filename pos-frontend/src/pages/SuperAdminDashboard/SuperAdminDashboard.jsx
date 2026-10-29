@@ -15,7 +15,7 @@ export default function SuperAdminDashboard({ children }) {
 
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="p-0 w-64 border-r-0">
-          <SuperAdminSidebar />
+          <SuperAdminSidebar onNavigate={() => setMobileMenuOpen(false)} />
         </SheetContent>
       </Sheet>
 

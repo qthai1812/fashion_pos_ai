@@ -13,6 +13,7 @@ import { Edit, UserX, UserCheck, Key, BarChart } from "lucide-react";
 
 const EmployeeTable = ({
   employees,
+  currentUser,
   handleToggleAccess,
   openResetPasswordDialog,
   openPerformanceDialog,
@@ -34,9 +35,30 @@ const EmployeeTable = ({
         {employees?.length > 0 ? (
           employees.map((employee) => {
             const hasAccess = employee.loginAccess !== false;
+            const isSelf =
+              currentUser &&
+              (employee.id === currentUser.id ||
+                (employee.email &&
+                  currentUser.email &&
+                  employee.email.toLowerCase() ===
+                    currentUser.email.toLowerCase()));
+            const isManagerRole =
+              employee.role === "ROLE_BRANCH_MANAGER" ||
+              employee.role === "ROLE_STORE_ADMIN" ||
+              employee.role === "ROLE_STORE_MANAGER" ||
+              employee.role === "ROLE_ADMIN";
+            const cannotDisable = hasAccess && Boolean(isSelf || isManagerRole);
+
             return (
               <TableRow key={employee.id}>
-                <TableCell className="font-medium">{employee.fullName}</TableCell>
+                <TableCell className="font-medium">
+                  {employee.fullName}
+                  {isSelf && (
+                    <span className="ml-2 text-xs text-muted-foreground font-normal">
+                      (You)
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell>{employee.role}</TableCell>
                 <TableCell>{employee.email}</TableCell>
                 <TableCell>
@@ -57,8 +79,20 @@ const EmployeeTable = ({
                     <Button
                       variant="ghost"
                       size="icon"
+                      disabled={cannotDisable}
+                      className={
+                        cannotDisable ? "opacity-30 cursor-not-allowed" : ""
+                      }
                       onClick={() => handleToggleAccess(employee)}
-                      title={hasAccess ? "Disable Access" : "Enable Access"}
+                      title={
+                        isSelf
+                          ? "You cannot disable your own login access"
+                          : isManagerRole && hasAccess
+                            ? "Branch Manager access can only be managed by Store Admin"
+                            : hasAccess
+                              ? "Disable Access"
+                              : "Enable Access"
+                      }
                     >
                       {hasAccess ? (
                         <UserX className="h-4 w-4 text-red-500" />

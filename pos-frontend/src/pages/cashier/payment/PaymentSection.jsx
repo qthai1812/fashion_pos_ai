@@ -5,7 +5,6 @@ import { useDispatch } from "react-redux";
 import {
   holdOrder,
   selectCartItems,
-  selectSelectedCustomer,
   selectTotal,
 } from "../../../Redux Toolkit/features/cart/cartSlice";
 import { Button } from "../../../components/ui/button";
@@ -14,7 +13,6 @@ import { Pause } from "lucide-react";
 
 const PaymentSection = ({ setShowPaymentDialog }) => {
   const cartItems = useSelector(selectCartItems);
-  const selectedCustomer = useSelector(selectSelectedCustomer);
 
   const total = useSelector(selectTotal);
 
@@ -26,16 +24,6 @@ const PaymentSection = ({ setShowPaymentDialog }) => {
       toast({
         title: "Empty Cart",
         description: "Please add items to cart before proceeding to payment",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check if customer is selected
-    if (!selectedCustomer) {
-      toast({
-        title: "Customer Required",
-        description: "Please select a customer before proceeding to payment",
         variant: "destructive",
       });
       return;

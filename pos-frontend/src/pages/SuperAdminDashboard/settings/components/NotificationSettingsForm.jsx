@@ -55,7 +55,7 @@ const NotificationSettingsForm = ({ notifications, onToggle }) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {notificationItems.map((item, index) => (
+        {notificationItems.map((item) => (
           <React.Fragment key={item.id}>
             <NotificationItem
               id={item.id}
