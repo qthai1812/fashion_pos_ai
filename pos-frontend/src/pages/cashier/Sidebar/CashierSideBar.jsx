@@ -13,7 +13,7 @@ const CashierSideBar = ({ navItems, onClose }) => {
   const dispatch = useDispatch();
   const { userProfile } = useSelector((state) => state.user);
   const { branch, loading, error } = useSelector((state) => state.branch);
-  const navigate=useNavigate();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (userProfile && userProfile.branchId) {
@@ -21,40 +21,22 @@ const CashierSideBar = ({ navItems, onClose }) => {
         getBranchById({
           id: userProfile.branchId,
           jwt: localStorage.getItem("jwt"),
-        })
+        }),
       );
-      
     }
   }, [dispatch, userProfile]);
 
   const handleLogout = () => {
-    dispatch(logout())
-    navigate("/") 
+    dispatch(logout());
+    navigate("/");
   };
 
   return (
     <div className="w-64 border-r border-border bg-sidebar p-4 flex flex-col h-full relative">
-      <Button
-        className="absolute top-2 right-2 rounded"
-        onClick={onClose}
-        aria-label="Close sidebar"
-      >
-        <svg
-          className="h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      </Button>
       <div className="flex items-center justify-center p-2 mb-6">
-        <h1 className="text-xl font-bold text-sidebar-foreground">POS System</h1>
+        <h1 className="text-xl font-bold text-sidebar-foreground">
+          POS System
+        </h1>
       </div>
 
       <nav className="space-y-2 flex-1">
@@ -75,7 +57,6 @@ const CashierSideBar = ({ navItems, onClose }) => {
               {item.icon}
               <span>{item.label}</span>
             </div>
-        
           </Link>
         ))}
       </nav>
@@ -87,7 +68,7 @@ const CashierSideBar = ({ navItems, onClose }) => {
         <div className="flex items-center justify-center mb-2">
           <ThemeToggle />
         </div>
-   
+
         <Button
           variant="outline"
           className="w-full justify-start text-destructive hover:text-destructive"

@@ -12,7 +12,7 @@ public interface StoreService {
 
     StoreDTO createStore(StoreDTO storeDTO, User user);
     StoreDTO getStoreById(Long id) throws Exception;
-    List<StoreDTO> getAllStores();
+    List<StoreDTO> getAllStores(StoreStatus status);
     Store getStoreByAdmin() throws UserException;
     StoreDTO updateStore(Long id, StoreDTO storeDTO) throws Exception;
     void deleteStore(Long id) throws UserException;

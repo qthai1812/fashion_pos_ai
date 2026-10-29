@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Card, CardContent } from "@/components/ui/card";
+import { useNavigate } from "react-router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-
 import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog,
@@ -13,12 +12,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-
 import {
   SearchIcon,
   PrinterIcon,
-  EyeIcon,
-  RotateCcwIcon,
   CalendarIcon,
   Loader2,
   RefreshCw,
@@ -26,18 +22,18 @@ import {
 } from "lucide-react";
 import { getOrdersByCashier } from "@/Redux Toolkit/features/order/orderThunks";
 import OrderDetails from "./OrderDetails/OrderDetails";
-
 import OrderTable from "./OrderTable";
 import { handleDownloadOrderPDF } from "./pdf/pdfUtils";
 
 const OrderHistoryPage = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { userProfile } = useSelector((state) => state.user);
-  const { orders, loading, error } = useSelector((state) => state.order);
+  const { orders = [], loading, error } = useSelector((state) => state.order);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [dateFilter, setDateFilter] = useState("today");
+  const [dateFilter, setDateFilter] = useState("all");
   const [customDateRange, setCustomDateRange] = useState({
     start: "",
     end: "",
@@ -45,14 +41,12 @@ const OrderHistoryPage = () => {
   const [showOrderDetailsDialog, setShowOrderDetailsDialog] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // Fetch orders when component mounts
   useEffect(() => {
     if (userProfile?.id) {
       dispatch(getOrdersByCashier(userProfile.id));
     }
   }, [dispatch, userProfile]);
 
-  // Show error toast if orders fail to load
   useEffect(() => {
     if (error) {
       toast({
@@ -63,34 +57,65 @@ const OrderHistoryPage = () => {
     }
   }, [error, toast]);
 
-  // Get current date for filtering
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Filter orders by search term and date filter
+  const filteredOrders = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(todayStart.getDate() - todayStart.getDay());
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay());
+    return (orders || []).filter((order) => {
+      const q = searchTerm.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        String(order.id).toLowerCase().includes(q) ||
+        (order.customer?.fullName || "Walk-in Customer").toLowerCase().includes(q) ||
+        (order.customer?.phone || "").toLowerCase().includes(q);
+
+      if (!matchesSearch) return false;
+      if (dateFilter === "all") return true;
+
+      const orderDate = order.createdAt ? new Date(order.createdAt) : null;
+      if (!orderDate || isNaN(orderDate.getTime())) return true;
+
+      if (dateFilter === "today") {
+        return orderDate >= todayStart;
+      }
+      if (dateFilter === "week") {
+        return orderDate >= weekStart;
+      }
+      if (dateFilter === "month") {
+        return orderDate >= monthStart;
+      }
+      if (dateFilter === "custom") {
+        const startOk = !customDateRange.start || orderDate >= new Date(customDateRange.start);
+        const endOk =
+          !customDateRange.end ||
+          orderDate <= new Date(`${customDateRange.end}T23:59:59`);
+        return startOk && endOk;
+      }
+      return true;
+    });
+  }, [orders, searchTerm, dateFilter, customDateRange]);
 
   const handleViewOrder = (order) => {
     setSelectedOrder(order);
     setShowOrderDetailsDialog(true);
   };
 
-  const handlePrintInvoice = (order) => {
-    toast({
-      title: "Printing Invoice",
-      description: `Printing invoice for order ${order.id}`,
-    });
+  const handlePrintInvoice = async (order) => {
+    await handleDownloadOrderPDF(order, toast);
   };
 
   const handleInitiateReturn = (order) => {
-    // In a real app, this would navigate to the return page with the order pre-selected
     toast({
       title: "Initiating Return",
-      description: `Navigating to returns page for order ${order.id}`,
+      description: `Opening Return/Refund page for Order #${order.id}`,
     });
+    navigate("/cashier/returns", { state: { selectedOrder: order } });
   };
 
-  
   const handleDownloadPDF = async () => {
     await handleDownloadOrderPDF(selectedOrder, toast);
   };
@@ -128,7 +153,7 @@ const OrderHistoryPage = () => {
               <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search by order ID or customer..."
+                placeholder="Search by order ID, customer name, or phone..."
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -136,7 +161,13 @@ const OrderHistoryPage = () => {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={dateFilter === "all" ? "default" : "outline"}
+              onClick={() => setDateFilter("all")}
+            >
+              All
+            </Button>
             <Button
               variant={dateFilter === "today" ? "default" : "outline"}
               onClick={() => setDateFilter("today")}
@@ -211,9 +242,9 @@ const OrderHistoryPage = () => {
             <Loader2 className="animate-spin h-16 w-16 text-primary" />
             <p className="mt-4">Loading orders...</p>
           </div>
-        ) : orders.length > 0 ? (
+        ) : filteredOrders.length > 0 ? (
           <OrderTable
-            orders={orders}
+            orders={filteredOrders}
             handleInitiateReturn={handleInitiateReturn}
             handlePrintInvoice={handlePrintInvoice}
             handleViewOrder={handleViewOrder}
@@ -227,7 +258,6 @@ const OrderHistoryPage = () => {
         )}
       </div>
 
-      {/* Order Details Dialog */}
       <Dialog
         open={showOrderDetailsDialog}
         onOpenChange={setShowOrderDetailsDialog}
@@ -244,14 +274,10 @@ const OrderHistoryPage = () => {
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
               </Button>
-              <Button
-                variant=""
-                onClick={() => handlePrintInvoice(selectedOrder)}
-              >
+              <Button onClick={() => handlePrintInvoice(selectedOrder)}>
                 <PrinterIcon className="h-4 w-4 mr-2" />
                 Print Invoice
               </Button>
-             
             </DialogFooter>
           </DialogContent>
         )}

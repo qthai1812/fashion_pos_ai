@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -6,30 +6,26 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../components/ui/card";
-import { useState } from "react";
-import { useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { updateBranch } from "../../../Redux Toolkit/features/branch/branchThunks";
-import { useDispatch } from "react-redux";
 import { Input } from "@/components/ui/input";
-import { Phone } from "lucide-react";
-import { Mail } from "lucide-react";
-import { Clock } from "lucide-react";
-import { Save } from "lucide-react";
+import { Phone, Mail, Clock, Save } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Separator } from "../../../components/ui/separator";
 import { Checkbox } from "../../../components/ui/checkbox";
+import { useToast } from "@/components/ui/use-toast";
 
 const BranchInfo = () => {
   const dispatch = useDispatch();
+  const { toast } = useToast();
   const { branch } = useSelector((state) => state.branch);
   const [branchInfo, setBranchInfo] = useState({
     name: "",
     address: "",
     phone: "",
     email: "",
-    openingTime: "",
-    closingTime: "",
+    openTime: "",
+    closeTime: "",
     workingDays: [],
   });
 
@@ -40,33 +36,43 @@ const BranchInfo = () => {
         address: branch.address || "",
         phone: branch.phone || "",
         email: branch.email || "",
-        openingTime: branch.openingTime || "",
-        closingTime: branch.closingTime || "",
+        openTime: branch.openTime || branch.openingTime || "",
+        closeTime: branch.closeTime || branch.closingTime || "",
         workingDays: branch.workingDays || [],
       });
     }
   }, [branch]);
+
   const handleBranchInfoChange = (field, value) => {
-    setBranchInfo({
-      ...branchInfo,
+    setBranchInfo((prev) => ({
+      ...prev,
       [field]: value,
-    });
+    }));
   };
 
-  const handleSaveSettings = (settingType) => {
-    // In a real app, this would make an API call to save the settings
-    console.log(`Saving ${settingType} settings`);
-    if (settingType === "branch-info") {
-      dispatch(
+  const handleSaveSettings = async () => {
+    if (!branch?.id) return;
+    try {
+      await dispatch(
         updateBranch({
           id: branch.id,
           dto: branchInfo,
           jwt: localStorage.getItem("jwt"),
         })
-      );
-      console.log("Saving branch info:", branchInfo);
+      ).unwrap();
+      toast({
+        title: "Success",
+        description: "Branch information updated successfully",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err || "Failed to update branch information",
+        variant: "destructive",
+      });
     }
   };
+
   return (
     <Card>
       <CardHeader>
@@ -107,7 +113,7 @@ const BranchInfo = () => {
                 Phone Number
               </label>
               <div className="flex items-center">
-                <Phone className="mr-2 h-4 w-4 text-gray-500" />
+                <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="branch-phone"
                   value={branchInfo.phone}
@@ -122,7 +128,7 @@ const BranchInfo = () => {
                 Email Address
               </label>
               <div className="flex items-center">
-                <Mail className="mr-2 h-4 w-4 text-gray-500" />
+                <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="branch-email"
                   type="email"
@@ -146,13 +152,13 @@ const BranchInfo = () => {
                 Opening Time
               </label>
               <div className="flex items-center">
-                <Clock className="mr-2 h-4 w-4 text-gray-500" />
+                <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="opening-time"
                   type="time"
-                  value={branchInfo.openingTime}
+                  value={branchInfo.openTime}
                   onChange={(e) =>
-                    handleBranchInfoChange("openingTime", e.target.value)
+                    handleBranchInfoChange("openTime", e.target.value)
                   }
                 />
               </div>
@@ -162,13 +168,13 @@ const BranchInfo = () => {
                 Closing Time
               </label>
               <div className="flex items-center">
-                <Clock className="mr-2 h-4 w-4 text-gray-500" />
+                <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="closing-time"
                   type="time"
-                  value={branchInfo.closingTime}
+                  value={branchInfo.closeTime}
                   onChange={(e) =>
-                    handleBranchInfoChange("closingTime", e.target.value)
+                    handleBranchInfoChange("closeTime", e.target.value)
                   }
                 />
               </div>
@@ -189,6 +195,7 @@ const BranchInfo = () => {
               ].map((day) => (
                 <div key={day} className="flex items-center space-x-2">
                   <Checkbox
+                    id={`day-${day}`}
                     checked={branchInfo.workingDays.includes(day)}
                     onCheckedChange={(checked) => {
                       if (checked) {
@@ -204,10 +211,9 @@ const BranchInfo = () => {
                       }
                     }}
                   />
-               
                   <label
                     htmlFor={`day-${day}`}
-                    className="text-sm text-gray-700"
+                    className="text-sm text-foreground cursor-pointer"
                   >
                     {day}
                   </label>
@@ -218,10 +224,7 @@ const BranchInfo = () => {
         </div>
 
         <div className="flex justify-end">
-          <Button
-            className="gap-2"
-            onClick={() => handleSaveSettings("branch-info")}
-          >
+          <Button className="gap-2" onClick={handleSaveSettings}>
             <Save className="h-4 w-4" />
             Save Changes
           </Button>

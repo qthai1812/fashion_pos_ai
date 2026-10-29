@@ -10,7 +10,13 @@ import {
 } from "../../../components/ui/table";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../components/ui/select";
 import { Eye, MoreHorizontal, Ban, CheckCircle } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,27 +25,39 @@ import {
   DropdownMenuTrigger,
 } from "../../../components/ui/dropdown-menu";
 import StoreStatusBadge from "./StoreStatusBadge";
-import { getAllStores, moderateStore } from "../../../Redux Toolkit/features/store/storeThunks";
+import {
+  getAllStores,
+  moderateStore,
+} from "../../../Redux Toolkit/features/store/storeThunks";
 import { formatDateTime } from "../../../utils/formateDate";
 
-export default function StoreTable({ onViewDetails, onBlockStore, onActivateStore }) {
+export default function StoreTable({
+  onViewDetails,
+  onBlockStore,
+  onActivateStore,
+}) {
   const dispatch = useDispatch();
-  const { stores, loading, error } = useSelector((state) => state.store);
+  const { stores = [], loading, error } = useSelector((state) => state.store);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [updatingId, setUpdatingId] = useState(null);
 
   useEffect(() => {
-    // Fetch stores, optionally filtered by status
-    dispatch(getAllStores(statusFilter === "all" ? undefined : statusFilter));
+    dispatch(
+      getAllStores(
+        statusFilter === "all" ? undefined : statusFilter.toUpperCase()
+      )
+    );
   }, [dispatch, statusFilter]);
 
-  // Filtering by search term (client-side)
+  // Client-side search across brand, storeAdmin.fullName, and contact.email
   const filteredStores = (stores || []).filter((store) => {
+    const query = searchTerm.toLowerCase();
     const matchesSearch =
-      (store.brand?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (store?.owner?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (store?.email?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+      (store.brand?.toLowerCase() || "").includes(query) ||
+      (store.storeAdmin?.fullName?.toLowerCase() || "").includes(query) ||
+      (store.contact?.email?.toLowerCase() || "").includes(query) ||
+      (store.contact?.phone || "").includes(query);
     return matchesSearch;
   });
 
@@ -47,9 +65,8 @@ export default function StoreTable({ onViewDetails, onBlockStore, onActivateStor
     setUpdatingId(storeId);
     try {
       await dispatch(moderateStore({ storeId, action: newStatus })).unwrap();
-      // Optionally, you can show a toast here for success
     } catch (e) {
-      // Optionally, you can show a toast here for error
+      // Handled by slice error
     } finally {
       setUpdatingId(null);
     }
@@ -73,15 +90,15 @@ export default function StoreTable({ onViewDetails, onBlockStore, onActivateStor
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="blocked">Blocked</SelectItem>
+            <SelectItem value="ACTIVE">Active</SelectItem>
+            <SelectItem value="PENDING">Pending</SelectItem>
+            <SelectItem value="BLOCKED">Blocked</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         {loading ? (
           <div className="text-center py-8">Loading stores...</div>
         ) : error ? (
@@ -101,76 +118,109 @@ export default function StoreTable({ onViewDetails, onBlockStore, onActivateStor
               </TableRow>
             </TableHeader>
             <TableBody>
-              {stores.map((store) => (
-                <TableRow key={store.id}>
-                  <TableCell className="font-medium">{store.brand}</TableCell>
-                  <TableCell>{store.storeAdmin?.fullName}</TableCell>
-                  <TableCell>{store.contact?.phone}</TableCell>
-                  <TableCell>{store.contact?.email}</TableCell>
-                  <TableCell>
-                    <StoreStatusBadge status={store.status} />
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={store.status?.toUpperCase()}
-                      onValueChange={(val) => handleStatusChange(store.id, val)}
-                      disabled={updatingId === store.id}
-                    >
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ACTIVE">Active</SelectItem>
-                        <SelectItem value="PENDING">Pending</SelectItem>
-                        <SelectItem value="BLOCKED">Blocked</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {updatingId === store.id && (
-                      <span className="ml-2 text-xs text-muted-foreground">Updating...</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{formatDateTime(store.createdAt)}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onViewDetails?.(store)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        {store.status === "active" && (
-                          <DropdownMenuItem onClick={() => onBlockStore?.(store.id)}>
-                            <Ban className="mr-2 h-4 w-4" />
-                            Block Store
+              {filteredStores.map((store) => {
+                const upperStatus = store.status?.toUpperCase();
+                return (
+                  <TableRow key={store.id}>
+                    <TableCell className="font-medium">{store.brand}</TableCell>
+                    <TableCell>{store.storeAdmin?.fullName || "-"}</TableCell>
+                    <TableCell>{store.contact?.phone || "-"}</TableCell>
+                    <TableCell>{store.contact?.email || "-"}</TableCell>
+                    <TableCell>
+                      <StoreStatusBadge status={store.status} />
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={upperStatus}
+                        onValueChange={(val) =>
+                          handleStatusChange(store.id, val)
+                        }
+                        disabled={updatingId === store.id}
+                      >
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ACTIVE">Active</SelectItem>
+                          <SelectItem value="PENDING">Pending</SelectItem>
+                          <SelectItem value="BLOCKED">Blocked</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {updatingId === store.id && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          Updating...
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>{formatDateTime(store.createdAt)}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => onViewDetails?.(store)}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
                           </DropdownMenuItem>
-                        )}
-                        {store.status === "blocked" && (
-                          <DropdownMenuItem onClick={() => onActivateStore?.(store.id)}>
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            Activate Store
-                          </DropdownMenuItem>
-                        )}
-                        {store.status === "pending" && (
-                          <>
-                            <DropdownMenuItem onClick={() => onActivateStore?.(store.id)}>
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Approve Store
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onBlockStore?.(store.id)}>
+                          {upperStatus === "ACTIVE" && (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                onBlockStore
+                                  ? onBlockStore(store.id)
+                                  : handleStatusChange(store.id, "BLOCKED")
+                              }
+                            >
                               <Ban className="mr-2 h-4 w-4" />
-                              Reject Store
+                              Block Store
                             </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                          )}
+                          {upperStatus === "BLOCKED" && (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                onActivateStore
+                                  ? onActivateStore(store.id)
+                                  : handleStatusChange(store.id, "ACTIVE")
+                              }
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Activate Store
+                            </DropdownMenuItem>
+                          )}
+                          {upperStatus === "PENDING" && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  onActivateStore
+                                    ? onActivateStore(store.id)
+                                    : handleStatusChange(store.id, "ACTIVE")
+                                }
+                              >
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Approve Store
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  onBlockStore
+                                    ? onBlockStore(store.id)
+                                    : handleStatusChange(store.id, "BLOCKED")
+                                }
+                              >
+                                <Ban className="mr-2 h-4 w-4" />
+                                Reject Store
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
@@ -183,4 +233,4 @@ export default function StoreTable({ onViewDetails, onBlockStore, onActivateStor
       )}
     </div>
   );
-} 
+}

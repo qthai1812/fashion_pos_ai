@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
 
 const SalesSummaryCard = ({ shiftData }) => {
   return (
@@ -13,15 +13,17 @@ const SalesSummaryCard = ({ shiftData }) => {
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Total Sales:</span>
-            <span className="font-medium">₹{shiftData.totalSales?.toFixed(2)}</span>
+            <span className="font-medium">
+              đ{shiftData.totalSales?.toFixed(2)}
+            </span>
           </div>
           <div className="flex justify-between text-destructive">
             <span>Total Refunds:</span>
-            <span>-₹{shiftData.totalRefunds?.toFixed(2)}</span>
+            <span>-đ{shiftData.totalRefunds?.toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-bold pt-2 border-t">
             <span>Net Sales:</span>
-            <span>₹{shiftData.netSales?.toFixed(2)}</span>
+            <span>đ{shiftData.netSales?.toFixed(2)}</span>
           </div>
         </div>
       </CardContent>
@@ -29,4 +31,4 @@ const SalesSummaryCard = ({ shiftData }) => {
   );
 };
 
-export default SalesSummaryCard; 
+export default SalesSummaryCard;

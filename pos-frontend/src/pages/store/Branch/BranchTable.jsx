@@ -1,12 +1,22 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, MapPin, Phone, Users, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { deleteBranch, getAllBranchesByStore } from "@/Redux Toolkit/features/branch/branchThunks";
+import {
+  deleteBranch,
+  getAllBranchesByStore,
+} from "@/Redux Toolkit/features/branch/branchThunks";
 
-const BranchTable = ({ branches, loading, onEdit }) => {
+const BranchTable = ({ branches = [], loading, onEdit }) => {
   const dispatch = useDispatch();
   const { store } = useSelector((state) => state.store);
 
@@ -29,15 +39,24 @@ const BranchTable = ({ branches, loading, onEdit }) => {
         description: "Branch deleted successfully",
       });
 
-      // Refresh branches list
-      dispatch(getAllBranchesByStore({ storeId: store.id, jwt }));
+      if (store?.id) {
+        dispatch(getAllBranchesByStore({ storeId: store.id, jwt }));
+      }
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete branch",
+        description: error?.message || error || "Failed to delete branch",
         variant: "destructive",
       });
     }
+  };
+
+  const renderManagerName = (branch) => {
+    if (!branch.manager) return "Assigned via Branch";
+    if (typeof branch.manager === "object") {
+      return branch.manager.fullName || branch.manager.name || "Assigned";
+    }
+    return branch.manager;
   };
 
   return (
@@ -69,25 +88,25 @@ const BranchTable = ({ branches, loading, onEdit }) => {
           branches.map((branch) => (
             <TableRow key={branch.id}>
               <TableCell>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 font-medium">
                   {branch.name}
                 </div>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-gray-500" />
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
                   {branch.address}
                 </div>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-gray-500" />
-                  {branch.manager || "Not Assigned"}
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  {renderManagerName(branch)}
                 </div>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-gray-500" />
+                  <Phone className="h-4 w-4 text-muted-foreground" />
                   {branch.phone}
                 </div>
               </TableCell>

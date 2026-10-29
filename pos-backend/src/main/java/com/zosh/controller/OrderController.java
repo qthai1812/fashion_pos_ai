@@ -3,12 +3,14 @@ package com.zosh.controller;
 import com.zosh.domain.OrderStatus;
 import com.zosh.domain.PaymentType;
 import com.zosh.payload.dto.OrderDTO;
+import com.zosh.payload.response.ApiResponse;
 import com.zosh.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 
 @RestController
 @RequiredArgsConstructor
@@ -35,10 +37,11 @@ public class OrderController {
             @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) Long cashierId,
             @RequestParam(required = false) PaymentType paymentType,
+            @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) OrderStatus orderStatus) throws Exception {
-        return ResponseEntity.ok(orderService.getOrdersByBranch(branchId, customerId, cashierId, paymentType, orderStatus));
+        OrderStatus effectiveStatus = status != null ? status : orderStatus;
+        return ResponseEntity.ok(orderService.getOrdersByBranch(branchId, customerId, cashierId, paymentType, effectiveStatus));
     }
-
     @GetMapping("/cashier/{id}")
     public ResponseEntity<List<OrderDTO>> getOrderByCashier(
             @PathVariable Long id) throws Exception {
@@ -61,6 +64,16 @@ public class OrderController {
     public ResponseEntity<List<OrderDTO>> getRecentOrder(
             @PathVariable Long branchId) throws Exception {
         return ResponseEntity.ok(orderService.getTop5RecentOrdersByBranchId(branchId));
+    }
+
+    // ✅ Added: was missing DELETE endpoint despite service having deleteOrder()
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse> deleteOrder(
+            @PathVariable Long id) throws Exception {
+        orderService.deleteOrder(id);
+        ApiResponse apiResponse = new ApiResponse();
+        apiResponse.setMessage("Order deleted successfully");
+        return ResponseEntity.ok(apiResponse);
     }
 
 }

@@ -3,7 +3,6 @@ package com.zosh.configuration;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,44 +17,44 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.crypto.SecretKey;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class JwtValidator extends OncePerRequestFilter {
+
+    private static final String BEARER_PREFIX = "Bearer ";
+    private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor(
+            JwtConstant.JWT_SECRET.getBytes(StandardCharsets.UTF_8)
+    );
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
-        String jwt = request.getHeader(JwtConstant.JWT_HEADER);
+        String header = request.getHeader(JwtConstant.JWT_HEADER);
 
-        // Bearer jwt -> 7
-        if(jwt != null) {
-            jwt = jwt.substring(7);
-            try {
-                SecretKey key = Keys.hmacShaKeyFor(JwtConstant.JWT_SECRET.getBytes());
-                Claims claims = Jwts.parser()
-                        .verifyWith(key)
-                        .build()
-                        .parseSignedClaims(jwt)
-                        .getPayload();
+        if (header != null && header.startsWith(BEARER_PREFIX)) {
+            String jwt = header.substring(BEARER_PREFIX.length()).trim();
+            if (!jwt.isEmpty()) {
+                try {
+                    Claims claims = Jwts.parser()
+                            .verifyWith(SECRET_KEY)
+                            .build()
+                            .parseSignedClaims(jwt)
+                            .getPayload();
 
-                String email = String.valueOf(claims.get("email"));
-                String authorities = String.valueOf(claims.get("authorities"));
+                    String email = String.valueOf(claims.get("email"));
+                    String authorities = String.valueOf(claims.get("authorities"));
 
-                List<GrantedAuthority> auths = AuthorityUtils.commaSeparatedStringToAuthorityList(
-                        authorities
-                );
-                Authentication auth = new UsernamePasswordAuthenticationToken(
-                        email, null, auths);
-                SecurityContextHolder.getContext().setAuthentication(
-                        auth
-                );
-
-            }
-            catch(Exception e) {
-                throw new BadCredentialsException("Invalid JWT...");
+                    List<GrantedAuthority> auths = AuthorityUtils.commaSeparatedStringToAuthorityList(authorities);
+                    Authentication auth = new UsernamePasswordAuthenticationToken(email, null, auths);
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                } catch (Exception e) {
+                    SecurityContextHolder.clearContext();
+                    throw new BadCredentialsException("Invalid or expired JWT token", e);
+                }
             }
         }
         filterChain.doFilter(request, response);

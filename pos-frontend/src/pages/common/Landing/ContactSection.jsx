@@ -1,11 +1,56 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Phone, Mail, MapPin, Clock, ArrowRight, CheckCircle } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, ArrowRight, CheckCircle, Loader2 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 const ContactSection = () => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    business: '',
+    interest: '',
+    message: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim()) {
+      toast({
+        title: "Missing Required Fields",
+        description: "Please fill in your full name, email address, and phone number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    setTimeout(() => {
+      setSubmitting(false);
+      toast({
+        title: "Message Sent Successfully!",
+        description: `Thank you ${formData.name}! Our specialist will reach out to ${formData.email} within 24 hours.`,
+      });
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        business: '',
+        interest: '',
+        message: '',
+      });
+    }, 600);
+  };
+
   return (
-    <section className="py-16 bg-gradient-to-br from-primary to-primary-dark text-white overflow-hidden relative">
-      {/* Background Pattern */}
+    <section id="contact" className="py-16 bg-gradient-to-br from-primary to-primary-dark text-white overflow-hidden relative">
       <div className="absolute inset-0 z-0 opacity-10">
         <div className="grid grid-cols-10 h-full">
           {Array.from({ length: 100 }).map((_, i) => (
@@ -16,7 +61,6 @@ const ContactSection = () => {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Left Side - Contact Form */}
           <div>
             <div className="mb-8">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -28,22 +72,28 @@ const ContactSection = () => {
             </div>
             
             <div className="bg-white rounded-xl p-6 shadow-lg">
-              <form>
+              <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
                     <input 
                       type="text" 
-                      id="name" 
+                      id="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900" 
                       placeholder="Your name"
                     />
                   </div>
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
                     <input 
                       type="email" 
-                      id="email" 
+                      id="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900" 
                       placeholder="you@example.com"
                     />
@@ -52,19 +102,24 @@ const ContactSection = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
                     <input 
                       type="tel" 
-                      id="phone" 
+                      id="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      required
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900" 
-                      placeholder="+91 98765 43210"
+                      placeholder="+84 912 345 678"
                     />
                   </div>
                   <div>
                     <label htmlFor="business" className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
                     <input 
                       type="text" 
-                      id="business" 
+                      id="business"
+                      value={formData.business}
+                      onChange={handleChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900" 
                       placeholder="Your business name"
                     />
@@ -74,7 +129,9 @@ const ContactSection = () => {
                 <div className="mb-4">
                   <label htmlFor="interest" className="block text-sm font-medium text-gray-700 mb-1">I'm interested in</label>
                   <select 
-                    id="interest" 
+                    id="interest"
+                    value={formData.interest}
+                    onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900"
                   >
                     <option value="">Select an option</option>
@@ -89,21 +146,31 @@ const ContactSection = () => {
                   <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">Message</label>
                   <textarea 
                     id="message" 
-                    rows="4" 
+                    rows="4"
+                    value={formData.message}
+                    onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900" 
                     placeholder="Tell us about your business needs"
                   ></textarea>
                 </div>
                 
-                <Button className="w-full py-3 text-lg group">
-                  Send Message
-                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <Button type="submit" disabled={submitting} className="w-full py-3 text-lg group">
+                  {submitting ? (
+                    <>
+                      <Loader2 className="mr-2 w-5 h-5 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      Send Message
+                      <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
                 </Button>
               </form>
             </div>
           </div>
           
-          {/* Right Side - Contact Info */}
           <div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 shadow-lg mb-8">
               <h3 className="text-2xl font-bold mb-6">Contact Information</h3>
@@ -115,8 +182,8 @@ const ContactSection = () => {
                   </div>
                   <div>
                     <p className="font-medium mb-1">Phone</p>
-                    <p className="opacity-90">+91 98765 43210</p>
-                    <p className="opacity-90">+91 98765 43211</p>
+                    <a href="tel:+919876543210" className="block opacity-90 hover:underline">+91 98765 43210</a>
+                    <a href="tel:+919876543211" className="block opacity-90 hover:underline">+91 98765 43211</a>
                   </div>
                 </div>
                 
@@ -126,8 +193,8 @@ const ContactSection = () => {
                   </div>
                   <div>
                     <p className="font-medium mb-1">Email</p>
-                    <p className="opacity-90">sales@pospro.com</p>
-                    <p className="opacity-90">support@pospro.com</p>
+                    <a href="mailto:sales@pospro.com" className="block opacity-90 hover:underline">sales@pospro.com</a>
+                    <a href="mailto:support@pospro.com" className="block opacity-90 hover:underline">support@pospro.com</a>
                   </div>
                 </div>
                 

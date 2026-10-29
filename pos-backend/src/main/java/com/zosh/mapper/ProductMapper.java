@@ -16,18 +16,18 @@ public class ProductMapper {
                 .mrp(product.getMrp())
                 .sellingPrice(product.getSellingPrice())
                 .brand(product.getBrand())
-                .category(CategoryMapper.toDTO(product.getCategory()))
-                .storeId(product.getStore()!=null ? product.getStore().getId() : null)
+                .category(product.getCategory() != null ? CategoryMapper.toDTO(product.getCategory()) : null)
+                .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
+                .storeId(product.getStore() != null ? product.getStore().getId() : null)
                 .image(product.getImage())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .build();
-//                .categoryId(product.get)
     }
 
     public static Product toEntity(ProductDTO productDTO,
                                    Store store,
-                                   Category  category) {
+                                   Category category) {
         return Product.builder()
                 .name(productDTO.getName())
                 .store(store)
@@ -37,6 +37,7 @@ public class ProductMapper {
                 .mrp(productDTO.getMrp())
                 .sellingPrice(productDTO.getSellingPrice())
                 .brand(productDTO.getBrand())
+                .image(productDTO.getImage())
                 .build();
     }
 }

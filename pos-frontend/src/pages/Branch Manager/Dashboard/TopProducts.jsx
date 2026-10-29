@@ -27,8 +27,8 @@ const TopProducts = () => {
   // Map API data to recharts format
   const data = topProducts?.map((item) => ({
     name: item.productName,
-    value: item.quantitySold,
-    percentage: item.percentage,
+    value: item.totalQuantity,
+    percentage: item.percentageContribution,
   })) || [];
 
   const config = data.reduce((acc, item, idx) => {

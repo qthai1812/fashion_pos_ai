@@ -1,12 +1,15 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, ShoppingBagIcon, CalendarIcon, DollarSignIcon } from 'lucide-react';
-import { formatDate, getStatusColor } from '../../order/data';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Loader2,
+  ShoppingBagIcon,
+  CalendarIcon,
+  DollarSignIcon,
+} from "lucide-react";
+import { formatDate, getStatusColor } from "../../order/data";
 
 const PurchaseHistory = ({ orders, loading = false }) => {
-
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center p-4 text-center text-muted-foreground">
@@ -25,9 +28,6 @@ const PurchaseHistory = ({ orders, loading = false }) => {
       </div>
     );
   }
-
-
-
 
   return (
     <div className="p-4 border-t ">
@@ -53,7 +53,9 @@ const PurchaseHistory = ({ orders, loading = false }) => {
                   <div className="text-right">
                     <div className="flex items-center gap-2 mb-1">
                       <DollarSignIcon className="h-4 w-4" />
-                      <span className="font-bold">₹{order.totalAmount?.toFixed(2) || '0.00'}</span>
+                      <span className="font-bold">
+                        đ{order.totalAmount?.toFixed(2) || "0.00"}
+                      </span>
                     </div>
                     {order.status && (
                       <Badge className={getStatusColor(order.status)}>
@@ -62,22 +64,30 @@ const PurchaseHistory = ({ orders, loading = false }) => {
                     )}
                   </div>
                 </div>
-                
+
                 {order.paymentMethod && (
                   <div className="text-sm text-muted-foreground mb-2">
                     Payment: {order.paymentMethod}
                   </div>
                 )}
-                
+
                 {order.items && order.items.length > 0 && (
                   <div className="border-t pt-3">
                     <h4 className="text-sm font-medium mb-2">Items:</h4>
                     <div className="space-y-1">
                       {order.items.map((item, index) => (
-                        <div key={index} className="flex justify-between text-sm">
-                          <span>{item.product.name || item.productName || 'Unknown Product'}</span>
+                        <div
+                          key={index}
+                          className="flex justify-between text-sm"
+                        >
+                          <span>
+                            {item.product.name ||
+                              item.productName ||
+                              "Unknown Product"}
+                          </span>
                           <span className="text-muted-foreground">
-                            {item.quantity || 1} × ₹{(item.price || 0).toFixed(2)}
+                            {item.quantity || 1} × đ
+                            {(item.price || 0).toFixed(2)}
                           </span>
                         </div>
                       ))}
@@ -93,4 +103,4 @@ const PurchaseHistory = ({ orders, loading = false }) => {
   );
 };
 
-export default PurchaseHistory; 
+export default PurchaseHistory;

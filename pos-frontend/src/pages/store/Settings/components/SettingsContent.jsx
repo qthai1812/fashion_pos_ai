@@ -15,11 +15,8 @@ const SettingsContent = ({
   onNotificationSettingsChange,
   onSecuritySettingsChange,
   onPaymentSettingsChange,
+  onSaveAll,
 }) => {
-  const onSave = () => {
-    console.log("on save");
-    // Save all settings to the server
-  };
   return (
     <div className="space-y-6">
       <StoreSettings
@@ -42,7 +39,10 @@ const SettingsContent = ({
         onChange={onPaymentSettingsChange}
       />
 
-      <Button className="" variant={"outline"} onClick={onSave}>
+      <Button
+        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+        onClick={onSaveAll}
+      >
         <Save className="mr-2 h-4 w-4" /> Save All Settings
       </Button>
     </div>

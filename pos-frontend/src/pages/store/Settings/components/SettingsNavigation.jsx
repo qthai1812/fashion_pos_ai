@@ -1,65 +1,65 @@
 import React from "react";
-import { Store, Bell, Shield, CreditCard, Database, HelpCircle } from "lucide-react";
+import { Store, Bell, Shield, CreditCard } from "lucide-react";
 
-const SettingsNavigation = ({ activeSection }) => {
+const SettingsNavigation = ({ activeSection, onSelectSection }) => {
   const navItems = [
     {
       id: "store-settings",
       label: "Store Settings",
       icon: Store,
-      href: "#store-settings"
+      href: "#store-settings",
     },
     {
       id: "notification-settings",
       label: "Notification Settings",
       icon: Bell,
-      href: "#notification-settings"
+      href: "#notification-settings",
     },
     {
       id: "security-settings",
       label: "Security Settings",
       icon: Shield,
-      href: "#security-settings"
+      href: "#security-settings",
     },
     {
       id: "payment-settings",
       label: "Payment Settings",
       icon: CreditCard,
-      href: "#payment-settings"
+      href: "#payment-settings",
     },
-    {
-      id: "system-settings",
-      label: "System Settings",
-      icon: Database,
-      href: "#system-settings"
-    },
-    {
-      id: "help",
-      label: "Help & Support",
-      icon: HelpCircle,
-      href: "#help"
-    }
   ];
 
+  const handleClick = (e, id) => {
+    e.preventDefault();
+    if (onSelectSection) onSelectSection(id);
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   return (
-    <nav className="space-y-1">
+    <nav className="space-y-1 sticky top-6">
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = activeSection === item.id;
-        
+
         return (
           <a
             key={item.id}
             href={item.href}
-            className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
+            onClick={(e) => handleClick(e, item.id)}
+            className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
               isActive
                 ? "bg-emerald-100 text-emerald-700"
                 : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
             }`}
           >
-            <Icon className={`mr-3 h-5 w-5 ${
-              isActive ? "text-emerald-500" : "text-gray-400"
-            }`} />
+            <Icon
+              className={`mr-3 h-5 w-5 ${
+                isActive ? "text-emerald-500" : "text-gray-400"
+              }`}
+            />
             {item.label}
           </a>
         );
@@ -68,4 +68,4 @@ const SettingsNavigation = ({ activeSection }) => {
   );
 };
 
-export default SettingsNavigation; 
+export default SettingsNavigation;

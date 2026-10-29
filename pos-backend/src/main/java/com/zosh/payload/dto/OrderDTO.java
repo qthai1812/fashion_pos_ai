@@ -1,11 +1,8 @@
 package com.zosh.payload.dto;
 
+import com.zosh.domain.OrderStatus;
 import com.zosh.domain.PaymentType;
-import com.zosh.modal.Branch;
 import com.zosh.modal.Customer;
-import com.zosh.modal.OrderItem;
-import com.zosh.modal.User;
-import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,11 +19,22 @@ public class OrderDTO {
 
     private Long id;
 
+    private Double subTotal;
+
+    private Double taxAmount;
+
+    private Double discountAmount;
+
+    private String couponCode;
+
     private Double totalAmount;
+
+    private String note;
 
     private LocalDateTime createdAt;
 
     private Long branchId;
+
     private Long customerId;
 
     private BranchDTO branch;
@@ -36,6 +44,8 @@ public class OrderDTO {
     private Customer customer;
 
     private PaymentType paymentType;
+
+    private OrderStatus status;
 
     private List<OrderItemDTO> items;
 }

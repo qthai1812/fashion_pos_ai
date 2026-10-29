@@ -4,10 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Mail, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
-const EmployeeTable = ({ employees, onEdit, onDelete }) => {
+const EmployeeTable = ({ employees, branches, onEdit, onDelete }) => {
   if (!employees || employees.length === 0) {
     return <div className="text-center py-8 text-gray-500">No employees found.</div>;
   }
+
+  const getBranchName = (branchId) => {
+    if (!branchId || !branches) return "N/A";
+    const branch = branches.find((b) => b.id === branchId);
+    return branch ? branch.name : "N/A";
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -39,7 +45,7 @@ const EmployeeTable = ({ employees, onEdit, onDelete }) => {
               <TableCell>
                 <div className="flex items-center space-x-2">
                   <MapPin className="h-4 w-4 text-gray-500" />
-                  <span>{employee.branch?.name}</span>
+                  <span>{getBranchName(employee.branchId)}</span>
                 </div>
               </TableCell>
               <TableCell className="text-right">

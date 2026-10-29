@@ -9,6 +9,9 @@ import java.time.LocalDateTime;
 public class BranchMapper {
 
     public static BranchDTO toDTO(Branch branch) {
+        if (branch == null) {
+            return null;
+        }
         return BranchDTO.builder()
                 .id(branch.getId())
                 .name(branch.getName())
@@ -18,7 +21,9 @@ public class BranchMapper {
                 .closeTime(branch.getCloseTime())
                 .openTime(branch.getOpenTime())
                 .workingDays(branch.getWorkingDays())
-                .storeId(branch.getStore()!=null ? branch.getStore().getId() : null)
+                .storeId(branch.getStore() != null ? branch.getStore().getId() : null)
+                .manager(branch.getManager() != null ? UserMapper.toDTO(branch.getManager()) : null)
+                .managerName(branch.getManager() != null ? branch.getManager().getFullName() : null)
                 .createdAt(branch.getCreatedAt())
                 .updatedAt(branch.getUpdatedAt())
                 .build();

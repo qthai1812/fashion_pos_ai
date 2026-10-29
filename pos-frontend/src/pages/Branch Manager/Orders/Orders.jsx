@@ -1,45 +1,36 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-
 import { Button } from "@/components/ui/button";
-
-import { RefreshCw, ArrowUpDown } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import {
   getOrdersByBranch,
   getOrderById,
 } from "@/Redux Toolkit/features/order/orderThunks";
 import { findBranchEmployees } from "@/Redux Toolkit/features/employee/employeeThunks";
 import { getPaymentIcon } from "../../../utils/getPaymentIcon";
-
 import { getStatusColor } from "../../../utils/getStatusColor";
+import { useToast } from "@/components/ui/use-toast";
+import { handleDownloadOrderPDF } from "../../cashier/order/pdf/pdfUtils";
 import OrdersFilters from "./OrdersFilters";
 import OrdersTable from "./OrdersTable";
 import OrderDetailsDialog from "./OrderDetailsDialog";
 
 const Orders = () => {
   const dispatch = useDispatch();
+  const { toast } = useToast();
   const branchId = useSelector((state) => state.branch.branch?.id);
-  const { orders, loading } = useSelector((state) => state.order);
-  const { selectedOrder } = useSelector((state) => state.order);
-
-
+  const { orders = [], loading, selectedOrder } = useSelector((state) => state.order);
   const [showDetails, setShowDetails] = useState(false);
 
-  // Fetch branch employees (cashiers)
   useEffect(() => {
     if (branchId) {
       dispatch(findBranchEmployees({ branchId, role: "ROLE_BRANCH_CASHIER" }));
     }
   }, [branchId, dispatch]);
 
-  // Fetch orders when filters change
   useEffect(() => {
     if (branchId) {
-      const data = {
-        branchId,
-      };
-      console.log("filters data ", data);
-      dispatch(getOrdersByBranch(data));
+      dispatch(getOrdersByBranch({ branchId }));
     }
   }, [branchId, dispatch]);
 
@@ -48,18 +39,23 @@ const Orders = () => {
     setShowDetails(true);
   };
 
-  const handlePrintInvoice = (orderId) => {
-    // In a real app, this would trigger invoice printing
-    console.log(`Print invoice for order ${orderId}`);
+  const handlePrintInvoice = async (orderId) => {
+    const targetOrder = orders.find((o) => o.id === orderId) || selectedOrder;
+    if (targetOrder) {
+      await handleDownloadOrderPDF(targetOrder, toast);
+    } else {
+      const fetched = await dispatch(getOrderById(orderId)).unwrap();
+      await handleDownloadOrderPDF(fetched, toast);
+    }
   };
 
   const handleRefresh = () => {
     if (branchId) {
-      const data = {
-        branchId,
-      };
-      console.log("filter data ", data);
-      dispatch(getOrdersByBranch(data));
+      dispatch(getOrdersByBranch({ branchId }));
+      toast({
+        title: "Refreshed",
+        description: "Branch orders list has been updated.",
+      });
     }
   };
 
@@ -73,15 +69,13 @@ const Orders = () => {
           onClick={handleRefresh}
           disabled={loading}
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </div>
 
-      {/* Search and Filters */}
       <OrdersFilters />
 
-      {/* Orders Table */}
       <OrdersTable
         orders={orders}
         loading={loading}
@@ -91,7 +85,6 @@ const Orders = () => {
         getPaymentIcon={getPaymentIcon}
       />
 
-      {/* Order Details Dialog */}
       <OrderDetailsDialog
         open={showDetails && !!selectedOrder}
         onOpenChange={setShowDetails}

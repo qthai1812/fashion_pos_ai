@@ -146,7 +146,7 @@ const HeroSection = () => {
           <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 flex gap-4 w-full max-w-3xl px-4">
             {[
               { number: "5,000+", label: "Active Users" },
-              { number: "₹100M+", label: "Monthly Sales" },
+              { number: "đ100M+", label: "Monthly Sales" },
               { number: "99.9%", label: "Uptime" }
             ].map((stat, index) => (
               <div 

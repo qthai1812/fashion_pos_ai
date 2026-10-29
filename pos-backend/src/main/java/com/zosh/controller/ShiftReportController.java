@@ -1,13 +1,13 @@
 package com.zosh.controller;
 
 import com.zosh.payload.dto.ShiftReportDTO;
+import com.zosh.payload.response.ApiResponse;
 import com.zosh.service.ShiftReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,24 +20,30 @@ public class ShiftReportController {
 
     @PostMapping("/start")
     public ResponseEntity<ShiftReportDTO> startShift() throws Exception {
-        return ResponseEntity.ok(
-                shiftReportService.startShift()
-        );
+        return ResponseEntity.ok(shiftReportService.startShift());
     }
 
     @PatchMapping("/end")
-    public ResponseEntity<ShiftReportDTO> endShift() throws Exception {
+    public ResponseEntity<ShiftReportDTO> endShift(
+            @RequestParam(required = false) Long shiftReportId
+    ) throws Exception {
         return ResponseEntity.ok(
-                shiftReportService.endShift(null, null)
+                shiftReportService.endShift(shiftReportId, LocalDateTime.now())
         );
     }
 
     @GetMapping("/current")
-    public ResponseEntity<ShiftReportDTO> getCurrentShiftProgress() throws Exception {
+    public ResponseEntity<ShiftReportDTO> getCurrentShiftProgress(
+            @RequestParam(required = false) Long cashierId
+    ) throws Exception {
         return ResponseEntity.ok(
-
-                shiftReportService.getCurrentShiftProgress(null)
+                shiftReportService.getCurrentShiftProgress(cashierId)
         );
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ShiftReportDTO>> getAllShiftReports() {
+        return ResponseEntity.ok(shiftReportService.getAllShiftReports());
     }
 
     @GetMapping("/cashier/{cashierId}/by-date")
@@ -46,18 +52,15 @@ public class ShiftReportController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime date
     ) throws Exception {
         return ResponseEntity.ok(
-
                 shiftReportService.getShiftByCashierAndDate(cashierId, date)
         );
     }
-
 
     @GetMapping("/cashier/{cashierId}")
     public ResponseEntity<List<ShiftReportDTO>> getShiftReportByCashier(
             @PathVariable Long cashierId
     ) throws Exception {
         return ResponseEntity.ok(
-
                 shiftReportService.getShiftReportsByCashierId(cashierId)
         );
     }
@@ -67,7 +70,6 @@ public class ShiftReportController {
             @PathVariable Long branchId
     ) throws Exception {
         return ResponseEntity.ok(
-
                 shiftReportService.getShiftReportsByBranchId(branchId)
         );
     }
@@ -77,9 +79,17 @@ public class ShiftReportController {
             @PathVariable Long id
     ) throws Exception {
         return ResponseEntity.ok(
-
                 shiftReportService.getShiftReportById(id)
         );
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse> deleteShiftReport(
+            @PathVariable Long id
+    ) throws Exception {
+        shiftReportService.deleteShiftReport(id);
+        ApiResponse res = new ApiResponse();
+        res.setMessage("Shift report deleted successfully");
+        return ResponseEntity.ok(res);
+    }
 }

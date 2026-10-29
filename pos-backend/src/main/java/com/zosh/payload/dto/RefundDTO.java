@@ -1,12 +1,6 @@
 package com.zosh.payload.dto;
 
 import com.zosh.domain.PaymentType;
-import com.zosh.modal.Branch;
-import com.zosh.modal.Order;
-import com.zosh.modal.ShiftReport;
-import com.zosh.modal.User;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

@@ -1,8 +1,6 @@
 package com.zosh.payload.dto;
 
-import com.zosh.modal.Store;
-import jakarta.persistence.Column;
-import jakarta.persistence.ManyToOne;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

@@ -34,8 +34,16 @@ const navLinks = [
     path: "/super-admin/requests",
     icon: <Clock className="w-5 h-5" />,
   },
- 
-
+  {
+    name: "Commissions",
+    path: "/super-admin/commissions",
+    icon: <DollarSign className="w-5 h-5" />,
+  },
+  {
+    name: "Exports",
+    path: "/super-admin/exports",
+    icon: <Download className="w-5 h-5" />,
+  },
   {
     name: "Settings",
     path: "/super-admin/settings",
@@ -113,4 +121,4 @@ export default function SuperAdminSidebar() {
       </div>
     </aside>
   );
-} 
+}

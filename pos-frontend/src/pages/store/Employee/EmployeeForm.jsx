@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
     phone: Yup.string().required("Phone number is required"),
     role: Yup.string().required("Role is required"),
     branchId: Yup.string().when("role", {
-      is: (role) => role === "ROLE_BRANCH_MANAGERs" || role === "ROLE_CASHIER",
+      is: (role) => role === "ROLE_BRANCH_MANAGER" || role === "ROLE_BRANCH_CASHIER",
       then: (schema) => schema.required("Branch is required"),
       otherwise: (schema) => schema.notRequired(),
     }),
@@ -139,7 +139,7 @@ const EmployeeForm = ({ initialData, onSubmit, roles }) => {
             value={formik.values.role}
             onValueChange={(value) => {
             formik.setFieldValue("role", value);
-            if (value !== "ROLE_BRANCH_MANAGER" && value !== "ROLE_CASHIER") {
+            if (value !== "ROLE_BRANCH_MANAGER" && value !== "ROLE_BRANCH_CASHIER") {
               formik.setFieldValue("branchId", "");
             }
           }}
@@ -161,7 +161,7 @@ const EmployeeForm = ({ initialData, onSubmit, roles }) => {
             <div className="text-red-500 text-sm">{formik.errors.role}</div>
           ) : null}
         </div>
-        {(formik.values.role === "ROLE_BRANCH_MANAGER" || formik.values.role === "ROLE_CASHIER") && (
+        {(formik.values.role === "ROLE_BRANCH_MANAGER" || formik.values.role === "ROLE_BRANCH_CASHIER") && (
           <div className="space-y-2">
             <Label htmlFor="branchId">Branch</Label>
             <Select

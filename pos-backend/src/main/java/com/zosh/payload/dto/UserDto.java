@@ -1,8 +1,7 @@
 package com.zosh.payload.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.zosh.domain.UserRole;
-import jakarta.persistence.Column;
-import jakarta.persistence.Id;
 import jakarta.validation.constraints.Email;
 import lombok.Data;
 
@@ -15,12 +14,14 @@ public class UserDto {
 
     private String fullName;
 
+    @Email(message = "Email should be valid")
     private String email;
 
     private String phone;
 
     private UserRole role;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     private Long branchId;

@@ -1,9 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -37,29 +49,46 @@ export default function AddSaleDialog({ onSaleAdded }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedBranch || !selectedProduct || quantity < 1) {
-      toast({ title: "Error", description: "Please fill all fields correctly", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Please fill all fields correctly",
+        variant: "destructive",
+      });
       return;
     }
 
     setLoading(true);
     try {
+      const chosenProduct = products?.find(
+        (p) => String(p.id) === String(selectedProduct),
+      );
+      const unitPrice = Number(
+        chosenProduct?.sellingPrice ?? chosenProduct?.price ?? 0,
+      );
+      const qty = Number(quantity);
+      const subTotal = unitPrice * qty;
+      const taxAmount = Math.round(subTotal * 0.1);
+
       const orderData = {
-        branchId: selectedBranch,
+        branchId: Number(selectedBranch),
         paymentType: paymentType,
-        items: [{ productId: selectedProduct, quantity: Number(quantity) }]
+        taxAmount: taxAmount,
+        items: [{ productId: Number(selectedProduct), quantity: qty }],
       };
+
       await dispatch(createOrder(orderData)).unwrap();
       toast({ title: "Success", description: "Sale added successfully!" });
       setOpen(false);
-      
-      // Reset form
       setSelectedBranch("");
       setSelectedProduct("");
       setQuantity(1);
-      
       if (onSaleAdded) onSaleAdded();
     } catch (error) {
-      toast({ title: "Error", description: error || "Failed to add sale", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error || "Failed to add sale",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -84,17 +113,21 @@ export default function AddSaleDialog({ onSaleAdded }) {
                 <SelectValue placeholder="Select branch" />
               </SelectTrigger>
               <SelectContent>
-                {branches?.length > 0 ? branches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id.toString()}>
-                    {branch.name}
+                {branches?.length > 0 ? (
+                  branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                      {branch.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="none" disabled>
+                    No branches available
                   </SelectItem>
-                )) : (
-                  <SelectItem value="none" disabled>No branches available</SelectItem>
                 )}
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Product</label>
             <Select value={selectedProduct} onValueChange={setSelectedProduct}>
@@ -102,12 +135,16 @@ export default function AddSaleDialog({ onSaleAdded }) {
                 <SelectValue placeholder="Select product" />
               </SelectTrigger>
               <SelectContent>
-                {products?.length > 0 ? products.map((product) => (
-                  <SelectItem key={product.id} value={product.id.toString()}>
-                    {product.name} - ₹{product.price || product.sellingPrice}
+                {products?.length > 0 ? (
+                  products.map((product) => (
+                    <SelectItem key={product.id} value={product.id.toString()}>
+                      {product.name} - đ{product.price || product.sellingPrice}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="none" disabled>
+                    No products available
                   </SelectItem>
-                )) : (
-                  <SelectItem value="none" disabled>No products available</SelectItem>
                 )}
               </SelectContent>
             </Select>
@@ -115,7 +152,13 @@ export default function AddSaleDialog({ onSaleAdded }) {
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Quantity</label>
-            <Input type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
+            <Input
+              type="number"
+              min="1"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              required
+            />
           </div>
 
           <div className="space-y-2">
@@ -132,7 +175,11 @@ export default function AddSaleDialog({ onSaleAdded }) {
             </Select>
           </div>
 
-          <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={loading}>
+          <Button
+            type="submit"
+            className="w-full bg-emerald-600 hover:bg-emerald-700"
+            disabled={loading}
+          >
             {loading ? "Adding..." : "Confirm Sale"}
           </Button>
         </form>

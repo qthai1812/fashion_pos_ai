@@ -2,7 +2,6 @@ package com.zosh.payload.dto;
 
 import com.zosh.domain.StoreStatus;
 import com.zosh.modal.StoreContact;
-import com.zosh.modal.User;
 import lombok.Data;
 
 import java.time.LocalDateTime;

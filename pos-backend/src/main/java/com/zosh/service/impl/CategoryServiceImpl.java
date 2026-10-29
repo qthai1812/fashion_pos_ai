@@ -70,11 +70,20 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     private void checkAuthority(User user, Store store) throws Exception {
-        boolean isAdmin = user.getRole().equals(UserRole.ROLE_STORE_ADMIN);
-        boolean isManager = user.getRole().equals(UserRole.ROLE_STORE_MANAGER);
-        boolean isSameStore = user.equals(store.getStoreAdmin());
+        if (user == null || store == null) {
+            throw new Exception("you don't have permission to manage this category");
+        }
+        if (user.getRole() == UserRole.ROLE_ADMIN) {
+            return;
+        }
+        boolean isStoreOwner = user.getRole() == UserRole.ROLE_STORE_ADMIN
+                && store.getStoreAdmin() != null
+                && store.getStoreAdmin().getId().equals(user.getId());
+        boolean isSameStoreManager = (user.getRole() == UserRole.ROLE_STORE_MANAGER || user.getRole() == UserRole.ROLE_STORE_ADMIN)
+                && user.getStore() != null
+                && user.getStore().getId().equals(store.getId());
 
-        if(!(isAdmin && isSameStore) && !isManager){
+        if (!isStoreOwner && !isSameStoreManager) {
             throw new Exception("you don't have permission to manage this category");
         }
     }

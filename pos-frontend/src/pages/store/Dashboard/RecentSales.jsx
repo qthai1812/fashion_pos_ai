@@ -1,30 +1,82 @@
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getBranchPerformance } from "@/Redux Toolkit/features/storeAnalytics/storeAnalyticsThunks";
+import { Store, TrendingUp, ShoppingCart } from "lucide-react";
 
 const RecentSales = () => {
-  const recentSales = [
-    { branch: "Main Store", amount: "$1,234", date: "Today" },
-    { branch: "Downtown Branch", amount: "$891", date: "Today" },
-    { branch: "West Side Location", amount: "$654", date: "Yesterday" },
-    { branch: "East End Shop", amount: "$1,021", date: "Yesterday" },
-  ];
+  const dispatch = useDispatch();
+  const { branchPerformance, loading } = useSelector(
+    (state) => state.storeAnalytics,
+  );
+  const { userProfile } = useSelector((state) => state.user);
+
+  useEffect(() => {
+    if (userProfile?.id) {
+      dispatch(getBranchPerformance(userProfile.id));
+    }
+  }, [dispatch, userProfile]);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      minimumFractionDigits: 0,
+    }).format(amount || 0);
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Recent Sales</CardTitle>
+        <CardTitle className="text-xl font-semibold flex items-center justify-between">
+          <span>Hiệu suất các chi nhánh</span>
+          <TrendingUp className="w-5 h-5 text-emerald-500" />
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {recentSales.map((sale, index) => (
-            <div key={index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
-              <div>
-                <p className="font-medium">{sale.branch}</p>
-                <p className="text-sm text-gray-500">{sale.date}</p>
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Đang tải dữ liệu chi nhánh...
+          </div>
+        ) : !branchPerformance || branchPerformance.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Chưa có dữ liệu hiệu suất chi nhánh.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {branchPerformance.map((branch) => (
+              <div
+                key={branch.branchId}
+                className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-600">
+                    <Store className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{branch.branchName}</p>
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span>
+                        <ShoppingCart className="w-3 h-3 inline mr-1" />
+                        {branch.totalOrders} đơn
+                      </span>
+                      <span>•</span>
+                      <span>{branch.totalEmployees} nhân sự</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-base text-emerald-600">
+                    {formatCurrency(branch.totalRevenue)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    TB: {formatCurrency(branch.avgOrderValue)}
+                  </p>
+                </div>
               </div>
-              <p className="font-semibold">{sale.amount}</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

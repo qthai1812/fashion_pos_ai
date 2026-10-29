@@ -1,5 +1,10 @@
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Badge } from "../../components/ui/badge";
@@ -80,11 +85,17 @@ export default function CommissionsPage() {
         return;
       }
 
-      setCommissions(prev => prev.map(comm => 
-        comm.id === selectedCommission.id 
-          ? { ...comm, currentRate: rate, lastUpdated: new Date().toISOString().split('T')[0] }
-          : comm
-      ));
+      setCommissions((prev) =>
+        prev.map((comm) =>
+          comm.id === selectedCommission.id
+            ? {
+                ...comm,
+                currentRate: rate,
+                lastUpdated: new Date().toISOString().split("T")[0],
+              }
+            : comm,
+        ),
+      );
 
       toast({
         title: "Commission Updated",
@@ -100,9 +111,17 @@ export default function CommissionsPage() {
   const getRateChange = (current, previous) => {
     const change = current - previous;
     if (change > 0) {
-      return { value: `+${change}%`, className: "text-green-600", icon: <TrendingUp className="w-3 h-3" /> };
+      return {
+        value: `+${change}%`,
+        className: "text-green-600",
+        icon: <TrendingUp className="w-3 h-3" />,
+      };
     } else if (change < 0) {
-      return { value: `${change}%`, className: "text-red-600", icon: <TrendingDown className="w-3 h-3" /> };
+      return {
+        value: `${change}%`,
+        className: "text-red-600",
+        icon: <TrendingDown className="w-3 h-3" />,
+      };
     } else {
       return { value: "0%", className: "text-gray-600", icon: null };
     }
@@ -121,11 +140,13 @@ export default function CommissionsPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Earnings
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹37,000</div>
+            <div className="text-2xl font-bold">đ37,000</div>
             <p className="text-xs text-muted-foreground">
               +12% from last month
             </p>
@@ -177,22 +198,31 @@ export default function CommissionsPage() {
               </TableHeader>
               <TableBody>
                 {commissions.map((commission) => {
-                  const rateChange = getRateChange(commission.currentRate, commission.previousRate);
+                  const rateChange = getRateChange(
+                    commission.currentRate,
+                    commission.previousRate,
+                  );
                   return (
                     <TableRow key={commission.id}>
-                      <TableCell className="font-medium">{commission.storeName}</TableCell>
+                      <TableCell className="font-medium">
+                        {commission.storeName}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-sm">
                           {commission.currentRate}%
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className={`flex items-center gap-1 ${rateChange.className}`}>
+                        <div
+                          className={`flex items-center gap-1 ${rateChange.className}`}
+                        >
                           {rateChange.icon}
                           <span className="text-sm">{rateChange.value}</span>
                         </div>
                       </TableCell>
-                      <TableCell>₹{commission.totalEarnings.toLocaleString()}</TableCell>
+                      <TableCell>
+                        đ{commission.totalEarnings.toLocaleString()}
+                      </TableCell>
                       <TableCell>{commission.lastUpdated}</TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -259,4 +289,4 @@ export default function CommissionsPage() {
       </Dialog>
     </div>
   );
-} 
+}

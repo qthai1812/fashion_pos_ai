@@ -1,11 +1,9 @@
-import { createSlice} from '@reduxjs/toolkit';
-import { login, signup, forgotPassword, resetPassword } from './authThunk';
-
-
+import { createSlice } from "@reduxjs/toolkit";
+import { login, signup, forgotPassword, resetPassword } from "./authThunk";
 
 // ✅ Auth Slice
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState: {
     user: null,
     loading: false,
@@ -22,7 +20,8 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null;
       state.isAuthenticated = false;
-      localStorage.removeItem('token');
+      localStorage.removeItem("jwt");
+      localStorage.removeItem("token");
     },
     clearForgotPasswordState: (state) => {
       state.forgotPasswordLoading = false;
@@ -77,14 +76,13 @@ const authSlice = createSlice({
         state.forgotPasswordLoading = false;
         state.forgotPasswordSuccess = true;
         state.forgotPasswordError = null;
-        
       })
       .addCase(forgotPassword.rejected, (state, action) => {
         state.loading = false;
         state.forgotPasswordLoading = false;
         state.forgotPasswordError = action.payload;
         state.forgotPasswordSuccess = false;
-        state.error=action.payload
+        state.error = action.payload;
       })
 
       // Reset Password cases
@@ -105,10 +103,11 @@ const authSlice = createSlice({
         state.resetPasswordLoading = false;
         state.resetPasswordError = action.payload;
         state.resetPasswordSuccess = false;
-        state.error=action.payload
+        state.error = action.payload;
       });
   },
 });
 
-export const { logout, clearForgotPasswordState, clearResetPasswordState } = authSlice.actions;
+export const { logout, clearForgotPasswordState, clearResetPasswordState } =
+  authSlice.actions;
 export default authSlice.reducer;

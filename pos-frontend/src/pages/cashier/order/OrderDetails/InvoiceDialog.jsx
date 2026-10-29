@@ -1,6 +1,5 @@
 import React from "react";
-import { handleDownloadOrderPDF } from "../pdf/pdfUtils";
-import { useToast } from "../../../../components/ui/use-toast";
+import { useSelector, useDispatch } from "react-redux";
 import {
   Dialog,
   DialogContent,
@@ -9,30 +8,36 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
-import { PrinterIcon } from "lucide-react";
-import { useSelector } from "react-redux";
+import { Download, Printer } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import OrderDetails from "./OrderDetails";
-import { useDispatch } from "react-redux";
-import { resetOrder } from "../../../../Redux Toolkit/features/cart/cartSlice";
+import {
+  resetOrder,
+  selectCurrentOrder,
+} from "../../../../Redux Toolkit/features/cart/cartSlice";
+import { handleDownloadOrderPDF } from "../pdf/pdfUtils";
 
 const InvoiceDialog = ({ showInvoiceDialog, setShowInvoiceDialog }) => {
-  let { selectedOrder } = useSelector((state) => state.order);
-//   selectedOrder={customer:{fullName:""},items:[{}]}
-//   showInvoiceDialog=true
-  
+  let selectedOrder = useSelector(selectCurrentOrder);
   const { toast } = useToast();
   const dispatch = useDispatch();
+
   const handlePrintInvoice = () => {
-    console.log("print invoice...");
+    toast({
+      title: "Printing Invoice",
+      description: `Preparing print view for Invoice #${selectedOrder?.id || ""}`,
+    });
+    setTimeout(() => {
+      window.print();
+    }, 200);
   };
+
   const handleDownloadPDF = async () => {
     await handleDownloadOrderPDF(selectedOrder, toast);
   };
 
   const finishOrder = () => {
     setShowInvoiceDialog(false);
-    // Reset the order
     dispatch(resetOrder());
 
     toast({
@@ -44,24 +49,28 @@ const InvoiceDialog = ({ showInvoiceDialog, setShowInvoiceDialog }) => {
   return (
     <Dialog open={showInvoiceDialog} onOpenChange={setShowInvoiceDialog}>
       {selectedOrder && (
-        <DialogContent className="w-5xl">
+        <DialogContent className="sm:max-w-2xl lg:max-w-3xl w-[95vw] max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Order Details - Invoice</DialogTitle>
+            <DialogTitle className="text-xl font-bold">
+              Order Details - Invoice #{selectedOrder.id}
+            </DialogTitle>
           </DialogHeader>
-          <OrderDetails selectedOrder={selectedOrder} />
 
-          <DialogFooter className="gap-2 sm:gap-0 space-x-3">
-            <Button variant="outline" onClick={handleDownloadPDF}>
-              <Download className="h-4 w-4 mr-2" />
-              Download PDF
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handlePrintInvoice(selectedOrder)}
-            >
-              <PrinterIcon className="h-4 w-4 mr-2" />
-              Print Invoice
-            </Button>
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+            <OrderDetails selectedOrder={selectedOrder} />
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-between pt-3 border-t">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={handleDownloadPDF}>
+                <Download className="w-4 h-4 mr-2" />
+                Download PDF
+              </Button>
+              <Button variant="outline" onClick={handlePrintInvoice}>
+                <Printer className="w-4 h-4 mr-2" />
+                Print Invoice
+              </Button>
+            </div>
 
             <Button onClick={finishOrder}>Start New Order</Button>
           </DialogFooter>

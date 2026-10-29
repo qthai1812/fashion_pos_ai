@@ -8,7 +8,9 @@ import { useToast } from "@/components/ui/use-toast";
 const DashboardStats = () => {
   const dispatch = useDispatch();
   const { toast } = useToast();
-  const { storeOverview, loading } = useSelector((state) => state.storeAnalytics);
+  const { storeOverview, loading } = useSelector(
+    (state) => state.storeAnalytics
+  );
   const { userProfile } = useSelector((state) => state.user);
 
   useEffect(() => {
@@ -29,52 +31,50 @@ const DashboardStats = () => {
     }
   };
 
-  // Format currency
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount || 0);
   };
 
-  // Format percentage change
-  const formatChange = (current, previous) => {
-    if (!previous || previous === 0) return "+0%";
-    const change = ((current - previous) / previous) * 100;
-    const sign = change >= 0 ? "+" : "";
-    return `${sign}${change.toFixed(1)}%`;
-  };
+  // Mapped accurately to Backend StoreOverviewDTO:
+  // { totalRevenue, totalOrders, totalBranches, totalProducts, totalEmployees, avgOrderValue, monthlyGrowthRate }
+  const totalRevenue =
+    storeOverview?.totalRevenue ?? storeOverview?.totalSales ?? 0;
+  const growthRate = storeOverview?.monthlyGrowthRate ?? 0;
+  const growthLabel = `${growthRate >= 0 ? "+" : ""}${Number(growthRate).toFixed(1)}%`;
 
   const stats = [
-    { 
-      title: "Total Sales", 
-      value: formatCurrency(storeOverview?.totalSales || 0), 
-      icon: <DollarSign className="w-8 h-8 text-emerald-500" />, 
-      change: formatChange(storeOverview?.totalSales, storeOverview?.previousPeriodSales),
-      loading: loading
+    {
+      title: "Total Sales",
+      value: formatCurrency(totalRevenue),
+      icon: <DollarSign className="w-8 h-8 text-emerald-500" />,
+      change: growthLabel,
+      loading: loading,
     },
-    { 
-      title: "Total Branches", 
-      value: storeOverview?.totalBranches || 0, 
-      icon: <Store className="w-8 h-8 text-emerald-500" />, 
-      change: formatChange(storeOverview?.totalBranches, storeOverview?.previousPeriodBranches),
-      loading: loading
+    {
+      title: "Total Branches",
+      value: storeOverview?.totalBranches ?? 0,
+      icon: <Store className="w-8 h-8 text-emerald-500" />,
+      change: `${storeOverview?.totalOrders ?? 0} total orders`,
+      loading: loading,
     },
-    { 
-      title: "Total Products", 
-      value: storeOverview?.totalProducts || 0, 
-      icon: <ShoppingCart className="w-8 h-8 text-emerald-500" />, 
-      change: formatChange(storeOverview?.totalProducts, storeOverview?.previousPeriodProducts),
-      loading: loading
+    {
+      title: "Total Products",
+      value: storeOverview?.totalProducts ?? 0,
+      icon: <ShoppingCart className="w-8 h-8 text-emerald-500" />,
+      change: `Avg Order: ${formatCurrency(storeOverview?.avgOrderValue ?? 0)}`,
+      loading: loading,
     },
-    { 
-      title: "Total Employees", 
-      value: storeOverview?.totalEmployees || 0, 
-      icon: <Users className="w-8 h-8 text-emerald-500" />, 
-      change: formatChange(storeOverview?.totalEmployees, storeOverview?.previousPeriodEmployees),
-      loading: loading
+    {
+      title: "Total Employees",
+      value: storeOverview?.totalEmployees ?? 0,
+      icon: <Users className="w-8 h-8 text-emerald-500" />,
+      change: "+Active across branches",
+      loading: loading,
     },
   ];
 
@@ -85,25 +85,31 @@ const DashboardStats = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">{stat.title}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {stat.title}
+                </p>
                 <h3 className="text-2xl font-bold mt-1">
                   {stat.loading ? (
-                    <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-8 w-20 bg-muted rounded animate-pulse"></div>
                   ) : (
                     stat.value
                   )}
                 </h3>
-                <p className={`text-xs font-medium mt-1 ${
-                  stat.change.startsWith('+') ? 'text-emerald-500' : 'text-red-500'
-                }`}>
+                <div
+                  className={`text-xs font-medium mt-1 ${
+                    stat.change.startsWith("-")
+                      ? "text-red-500"
+                      : "text-emerald-500"
+                  }`}
+                >
                   {stat.loading ? (
-                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-4 w-16 bg-muted rounded animate-pulse"></div>
                   ) : (
-                    `${stat.change} from last month`
+                    stat.change
                   )}
-                </p>
+                </div>
               </div>
-              <div className="p-3 bg-emerald-50 rounded-full">
+              <div className="p-3 bg-emerald-500/10 rounded-full">
                 {stat.icon}
               </div>
             </div>

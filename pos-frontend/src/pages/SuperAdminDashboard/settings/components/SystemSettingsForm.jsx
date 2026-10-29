@@ -58,7 +58,6 @@ const SystemSettingsForm = ({ systemSettings, onToggle }) => {
               checked={systemSettings[item.id]}
               onToggle={() => onToggle(item.id)}
             />
-            {index === systemSettingItems.length - 2 && <Separator />}
           </React.Fragment>
         ))}
       </CardContent>
@@ -66,4 +65,4 @@ const SystemSettingsForm = ({ systemSettings, onToggle }) => {
   );
 };
 
-export default SystemSettingsForm; 
+export default SystemSettingsForm;

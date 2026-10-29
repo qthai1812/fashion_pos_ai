@@ -1,16 +1,18 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-// import { Button } from '@/src/components/ui/button';
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import {
   getAllSubscriptionPlans,
   deleteSubscriptionPlan,
+  updateSubscriptionPlan,
 } from "@/Redux Toolkit/features/subscriptionPlan/subscriptionPlanThunks";
-
-import { toast} from "../../../components/ui/use-toast";
+import { toast } from "../../../components/ui/use-toast";
 import { Button } from "../../../components/ui/button";
 import {
   Table,
@@ -22,30 +24,72 @@ import {
 } from "../../../components/ui/table";
 import AddPlanDialog from "./AddPlanDialog";
 import { Switch } from "../../../components/ui/switch";
-import { updateSubscriptionPlan } from '@/Redux Toolkit/features/subscriptionPlan/subscriptionPlanThunks';
 import EditPlanDialog from "./EditPlanDialog";
-
-const BILLING_CYCLES = [
-  { label: "All", value: "" },
-  { label: "Monthly", value: "MONTHLY" },
-  { label: "Yearly", value: "YEARLY" },
-];
+import {
+  Edit,
+  Trash2,
+  BarChart3,
+  Boxes,
+  Plug,
+  ShoppingBag,
+  FileBadge,
+  Headphones,
+  MapPin,
+  Plus,
+} from "lucide-react";
 
 const FEATURE_FLAGS = [
-  { key: "advancedReports", label: "Advanced Reports", icon: "✅" },
-  { key: "inventory", label: "Inventory System", icon: "📦" },
-  { key: "integrations", label: "Integrations", icon: "🔗" },
-  { key: "ecommerce", label: "eCommerce", icon: "🛒" },
-  { key: "invoiceBranding", label: "Invoice Branding", icon: "🧾" },
-  { key: "prioritySupport", label: "Priority Support", icon: "🛠️" },
-  { key: "multiLocation", label: "Multi-location", icon: "📍" },
+  {
+    key: "advancedReports",
+    label: "Advanced Reports",
+    icon: <BarChart3 className="w-4 h-4 text-blue-500" />,
+  },
+  {
+    key: "inventory",
+    label: "Inventory System",
+    icon: <Boxes className="w-4 h-4 text-emerald-500" />,
+  },
+  {
+    key: "integrations",
+    label: "Integrations",
+    icon: <Plug className="w-4 h-4 text-purple-500" />,
+  },
+  {
+    key: "ecommerce",
+    label: "eCommerce",
+    icon: <ShoppingBag className="w-4 h-4 text-orange-500" />,
+  },
+  {
+    key: "invoiceBranding",
+    label: "Invoice Branding",
+    icon: <FileBadge className="w-4 h-4 text-pink-500" />,
+  },
+  {
+    key: "prioritySupport",
+    label: "Priority Support",
+    icon: <Headphones className="w-4 h-4 text-amber-500" />,
+  },
+  {
+    key: "multiLocation",
+    label: "Multi-location",
+    icon: <MapPin className="w-4 h-4 text-cyan-500" />,
+  },
 ];
 
 function getFeatureBadges(plan) {
   return FEATURE_FLAGS.filter((f) => plan[f.key]).map((f) => (
-    <Tooltip key={f.key} content={f.label}>
-      <span style={{ marginRight: 4, fontSize: 18 }}>{f.icon}</span>
-    </Tooltip>
+    <TooltipProvider key={f.key}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center justify-center p-1 rounded bg-muted mr-1">
+            {f.icon}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{f.label}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   ));
 }
 
@@ -63,14 +107,8 @@ const columns = [
 
 const SubscriptionPlansPage = () => {
   const dispatch = useDispatch();
-  
-  const { plans, error } = useSelector(
-    (state) => state.subscriptionPlan
-  );
-
+  const { plans, error } = useSelector((state) => state.subscriptionPlan);
   const [search, setSearch] = useState("");
-  
-
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [statusLoadingId, setStatusLoadingId] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -81,13 +119,12 @@ const SubscriptionPlansPage = () => {
   }, [dispatch]);
 
   const filteredPlans = useMemo(() => {
-    let filtered = plans;
+    let filtered = plans || [];
     if (search) {
       filtered = filtered.filter((plan) =>
-        plan.name.toLowerCase().includes(search.toLowerCase())
+        plan.name?.toLowerCase().includes(search.toLowerCase()),
       );
     }
-
     return filtered;
   }, [plans, search]);
 
@@ -100,7 +137,6 @@ const SubscriptionPlansPage = () => {
         toast({
           title: "Deleted",
           description: "Subscription plan deleted successfully",
-          variant: "success",
         });
       } else {
         toast({
@@ -115,16 +151,24 @@ const SubscriptionPlansPage = () => {
   const handleStatusToggle = async (plan) => {
     setStatusLoadingId(plan.id);
     const updated = { ...plan, active: !plan.active };
-    // Remove fields not needed for update (like Redux entity fields)
     delete updated.createdAt;
     delete updated.updatedAt;
-    const res = await dispatch(updateSubscriptionPlan({ id: plan.id, plan: updated }));
+    const res = await dispatch(
+      updateSubscriptionPlan({ id: plan.id, plan: updated }),
+    );
     setStatusLoadingId(null);
-    if (res.meta.requestStatus === 'fulfilled') {
-      toast({ title: 'Status Updated', description: `Plan is now ${updated.active ? 'Active' : 'Inactive'}`, variant: 'success' });
+    if (res.meta.requestStatus === "fulfilled") {
+      toast({
+        title: "Status Updated",
+        description: `Plan is now ${updated.active ? "Active" : "Inactive"}`,
+      });
       dispatch(getAllSubscriptionPlans());
     } else {
-      toast({ title: 'Error', description: res.payload || 'Failed to update status', variant: 'destructive' });
+      toast({
+        title: "Error",
+        description: res.payload || "Failed to update status",
+        variant: "destructive",
+      });
     }
   };
 
@@ -148,7 +192,8 @@ const SubscriptionPlansPage = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Subscription Plans</h1>
         <Button onClick={() => setAddDialogOpen(true)}>
-          ➕ Add New Plan
+          <Plus className="w-4 h-4 mr-2" />
+          Add New Plan
         </Button>
       </div>
       <div className="flex flex-wrap gap-4 mb-4 items-center">
@@ -158,13 +203,14 @@ const SubscriptionPlansPage = () => {
           onChange={(e) => setSearch(e.target.value)}
           className="w-64"
         />
-       
-      
       </div>
-      <div className="overflow-x-auto bg-white rounded shadow" style={{ maxHeight: 500, overflowY: 'auto' }}>
+      <div
+        className="overflow-x-auto bg-card text-card-foreground border rounded-lg shadow-sm"
+        style={{ maxHeight: 500, overflowY: "auto" }}
+      >
         <Table className="min-w-full text-sm">
           <TableHeader>
-            <TableRow className="bg-gray-100">
+            <TableRow className="bg-muted/50">
               {columns.map((col) => (
                 <TableHead
                   key={col.key}
@@ -180,18 +226,20 @@ const SubscriptionPlansPage = () => {
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="text-center py-8 text-gray-400"
+                  className="text-center py-8 text-muted-foreground"
                 >
                   No plans found.
                 </TableCell>
               </TableRow>
             )}
             {filteredPlans.map((plan) => (
-              <TableRow key={plan.id} className="border-b hover:bg-gray-50">
+              <TableRow key={plan.id} className="border-b hover:bg-muted/50">
                 <TableCell className="px-4 py-2 font-medium">
                   {plan.name}
                 </TableCell>
-                <TableCell className="px-4 py-2">₹{plan.price}</TableCell>
+                <TableCell className="px-4 py-2">
+                  {Number(plan.price || 0).toLocaleString("vi-VN")} ₫
+                </TableCell>
                 <TableCell className="px-4 py-2">{plan.billingCycle}</TableCell>
                 <TableCell className="px-4 py-2">
                   {plan.maxBranches ?? "-"}
@@ -203,50 +251,66 @@ const SubscriptionPlansPage = () => {
                   {plan.maxProducts ?? "-"}
                 </TableCell>
                 <TableCell className="px-4 py-2">
-                  
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={!!plan.active}
                       onCheckedChange={() => handleStatusToggle(plan)}
                       disabled={statusLoadingId === plan.id}
                     />
-                    <span className={plan.active ? 'text-green-600' : 'text-red-500'}>
-                      {plan.active ? 'Active' : 'Inactive'}
+                    <span
+                      className={
+                        plan.active ? "text-green-600" : "text-red-500"
+                      }
+                    >
+                      {plan.active ? "Active" : "Inactive"}
                     </span>
-                    {statusLoadingId === plan.id && <span className="text-xs text-gray-400">Updating...</span>}
+                    {statusLoadingId === plan.id && (
+                      <span className="text-xs text-muted-foreground">
+                        Updating...
+                      </span>
+                    )}
                   </div>
                 </TableCell>
-                <TableCell className="px-4 py-2  ">
-                
+                <TableCell className="px-4 py-2">
                   {getFeatureBadges(plan)}
                 </TableCell>
                 <TableCell className="px-4 py-2 flex gap-2">
-                  
-                  <Tooltip content="Edit">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => {
-                        setSelectedPlan(plan);
-                        setEditDialogOpen(true);
-                      }}
-                    >
-                      <span role="img" aria-label="edit">
-                        ✏️
-                      </span>
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content="Delete">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleDelete(plan.id)}
-                    >
-                      <span role="img" aria-label="delete">
-                        🗑️
-                      </span>
-                    </Button>
-                  </Tooltip>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            setSelectedPlan(plan);
+                            setEditDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Edit</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => handleDelete(plan.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Delete</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
               </TableRow>
             ))}

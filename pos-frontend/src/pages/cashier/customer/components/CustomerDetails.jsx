@@ -1,8 +1,34 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { StarIcon, PlusIcon, Loader2, UserIcon } from 'lucide-react';
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StarIcon, PlusIcon, Loader2, UserIcon, Award } from "lucide-react";
+
+export const getLoyaltyTier = (points = 0) => {
+  const pts = Number(points || 0);
+  if (pts >= 200) {
+    return {
+      label: "Diamond",
+      className: "bg-purple-100 text-purple-800 border-purple-300",
+    };
+  }
+  if (pts >= 100) {
+    return {
+      label: "Gold",
+      className: "bg-amber-100 text-amber-800 border-amber-300",
+    };
+  }
+  if (pts >= 30) {
+    return {
+      label: "Silver",
+      className: "bg-slate-200 text-slate-800 border-slate-300",
+    };
+  }
+  return {
+    label: "Member",
+    className: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  };
+};
 
 const CustomerDetails = ({ customer, onAddPoints, loading = false }) => {
   if (!customer) {
@@ -23,13 +49,24 @@ const CustomerDetails = ({ customer, onAddPoints, loading = false }) => {
     );
   }
 
+  const pts = Number(customer.loyaltyPoints || 0);
+  const tier = getLoyaltyTier(pts);
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h2 className="text-2xl font-bold">{customer.fullName || 'Unknown Customer'}</h2>
-          <p className="text-muted-foreground">{customer.phone || 'N/A'}</p>
-          <p className="text-muted-foreground">{customer.email || 'N/A'}</p>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold">
+              {customer.fullName || customer.name || "Unknown Customer"}
+            </h2>
+            <Badge variant="outline" className={tier.className}>
+              <Award className="w-3.5 h-3.5 mr-1" />
+              {tier.label}
+            </Badge>
+          </div>
+          <p className="text-muted-foreground">{customer.phone || "N/A"}</p>
+          <p className="text-muted-foreground">{customer.email || "N/A"}</p>
         </div>
         <Button onClick={onAddPoints} className="flex items-center gap-2">
           <PlusIcon className="h-4 w-4" />
@@ -46,9 +83,12 @@ const CustomerDetails = ({ customer, onAddPoints, loading = false }) => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <StarIcon className="h-5 w-5 text-yellow-500" />
-              <span className="text-2xl font-bold">{customer.loyaltyPoints || 0}</span>
+              <StarIcon className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+              <span className="text-2xl font-bold">{pts}</span>
             </div>
+            <p className="text-xs text-amber-600 font-medium mt-1">
+              Quy đổi: {(pts * 1000).toLocaleString("vi-VN")}₫
+            </p>
           </CardContent>
         </Card>
 
@@ -59,7 +99,9 @@ const CustomerDetails = ({ customer, onAddPoints, loading = false }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <span className="text-2xl font-bold">{customer.totalOrders || 0}</span>
+            <span className="text-2xl font-bold">
+              {customer.totalOrders || 0}
+            </span>
           </CardContent>
         </Card>
 
@@ -70,31 +112,29 @@ const CustomerDetails = ({ customer, onAddPoints, loading = false }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <span className="text-2xl font-bold">₹{(customer.totalSpent || 0).toFixed(2)}</span>
+            <span className="text-2xl font-bold">
+              ₫{Number(customer.totalSpent || 0).toLocaleString("vi-VN")}
+            </span>
           </CardContent>
         </Card>
       </div>
 
-      {customer.averageOrderValue && (
+      {customer.averageOrderValue > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Average Order Value</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Average Order Value
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <span className="text-2xl font-bold">₹{customer.averageOrderValue.toFixed(2)}</span>
+            <span className="text-2xl font-bold">
+              ₫{Number(customer.averageOrderValue || 0).toLocaleString("vi-VN")}
+            </span>
           </CardContent>
         </Card>
-      )}
-
-      {customer.lastVisit && (
-        <div className="mt-4">
-          <p className="text-sm text-muted-foreground">
-            Last Visit: {new Date(customer.lastVisit).toLocaleDateString()}
-          </p>
-        </div>
       )}
     </div>
   );
 };
 
-export default CustomerDetails; 
+export default CustomerDetails;

@@ -1,5 +1,7 @@
 package com.zosh.service.impl;
 
+import com.zosh.domain.OrderStatus;
+import com.zosh.domain.UserRole;
 import com.zosh.modal.*;
 import com.zosh.payload.response.*;
 import com.zosh.repository.*;
@@ -26,26 +28,49 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
     private final InventoryRepository inventoryRepository;
     private final StoreRepository storeRepository;
 
-    private List<Order> getAllOrdersForUser(Long storeAdminId) throws Exception {
-        userRepository.findById(storeAdminId)
-                .orElseThrow(() -> new Exception("User not found: " + storeAdminId));
-        Store store = storeRepository.findByStoreAdminId(storeAdminId);
-        if (store == null) {
-            throw new Exception("Store not found for user: " + storeAdminId);
+    private Store resolveStoreAndValidateAccess(Long userOrStoreAdminId) throws Exception {
+        User targetUser = userRepository.findById(userOrStoreAdminId)
+                .orElseThrow(() -> new Exception("User not found: " + userOrStoreAdminId));
+
+        Store store = storeRepository.findByStoreAdminId(targetUser.getId());
+        if (store == null && targetUser.getStore() != null) {
+            store = targetUser.getStore();
         }
-        // Truy vấn 1 lần kèm @EntityGraph thay vì lặp qua từng Branch gây N+1 queries
-        return orderRepository.findAllByStoreIdWithDetails(store.getId());
+        if (store == null) {
+            throw new Exception("Store not found for user: " + userOrStoreAdminId);
+        }
+
+        String currentEmail = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(currentEmail);
+
+        if (currentUser != null && currentUser.getRole() != UserRole.ROLE_ADMIN) {
+            boolean isStoreOwner = store.getStoreAdmin() != null && store.getStoreAdmin().getId().equals(currentUser.getId());
+            boolean isSameStoreEmployee = currentUser.getStore() != null && currentUser.getStore().getId().equals(store.getId());
+            if (!isStoreOwner && !isSameStoreEmployee) {
+                throw new Exception("You do not have permission to view analytics of another store");
+            }
+        }
+        return store;
+    }
+
+    private List<Order> getAllOrdersForUser(Long storeAdminId) throws Exception {
+        Store store = resolveStoreAndValidateAccess(storeAdminId);
+        return orderRepository.findAllByStoreIdWithDetails(store.getId()).stream()
+                .filter(o -> o.getStatus() != OrderStatus.REFUNDED)
+                .collect(Collectors.toList());
     }
 
     @Override
     public StoreOverviewDTO getStoreOverview(Long storeAdminId) throws Exception {
+        Store store = resolveStoreAndValidateAccess(storeAdminId);
         List<Order> orders = getAllOrdersForUser(storeAdminId);
-        Store store = storeRepository.findByStoreAdminId(storeAdminId);
-        if (store == null) throw new Exception("Store not found");
+
         Long storeId = store.getId();
         List<Branch> branches = branchRepository.findByStoreId(storeId);
         List<User> employees = userRepository.findByStore(store);
         long totalProducts = productRepository.findByStoreId(storeId).size();
+
         double totalRevenue = orders.stream().mapToDouble(o -> o.getTotalAmount() != null ? o.getTotalAmount() : 0).sum();
         double avgOrderValue = orders.isEmpty() ? 0 : totalRevenue / orders.size();
 
@@ -54,10 +79,12 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
                 .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().getMonth() == now.getMonth()
                         && o.getCreatedAt().getYear() == now.getYear())
                 .mapToDouble(o -> o.getTotalAmount() != null ? o.getTotalAmount() : 0).sum();
+
         double lastMonth = orders.stream()
                 .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().getMonth() == now.minusMonths(1).getMonth()
                         && o.getCreatedAt().getYear() == now.minusMonths(1).getYear())
                 .mapToDouble(o -> o.getTotalAmount() != null ? o.getTotalAmount() : 0).sum();
+
         double growth = lastMonth == 0 ? 0 : ((thisMonth - lastMonth) / lastMonth * 100);
 
         return new StoreOverviewDTO(totalRevenue, orders.size(), branches.size(),
@@ -69,9 +96,10 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
     public List<SalesTrendDTO> getSalesTrends(Long storeAdminId, String period) throws Exception {
         List<Order> orders = getAllOrdersForUser(storeAdminId);
         Map<String, double[]> grouped = new TreeMap<>();
-        DateTimeFormatter fmt = period.equals("monthly") ? DateTimeFormatter.ofPattern("yyyy-MM") :
-                period.equals("weekly") ? DateTimeFormatter.ofPattern("yyyy-'W'ww") :
+        DateTimeFormatter fmt = "monthly".equalsIgnoreCase(period) ? DateTimeFormatter.ofPattern("yyyy-MM") :
+                "weekly".equalsIgnoreCase(period) ? DateTimeFormatter.ofPattern("yyyy-'W'ww") :
                         DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
         for (Order o : orders) {
             if (o.getCreatedAt() == null) continue;
             String key = o.getCreatedAt().format(fmt);
@@ -79,6 +107,7 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
             grouped.get(key)[0] += o.getTotalAmount() != null ? o.getTotalAmount() : 0;
             grouped.get(key)[1]++;
         }
+
         List<SalesTrendDTO> result = new ArrayList<>();
         String[] keys = grouped.keySet().toArray(new String[0]);
         for (int i = 0; i < keys.length; i++) {
@@ -180,13 +209,12 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
 
     @Override
     public List<BranchPerformanceDTO> getBranchPerformance(Long storeAdminId) throws Exception {
-        userRepository.findById(storeAdminId).orElseThrow(() -> new Exception("User not found"));
-        Store store = storeRepository.findByStoreAdminId(storeAdminId);
-        if (store == null) throw new Exception("Store not found");
+        Store store = resolveStoreAndValidateAccess(storeAdminId);
         List<Branch> branches = branchRepository.findByStoreId(store.getId());
         List<BranchPerformanceDTO> result = new ArrayList<>();
         for (Branch branch : branches) {
-            List<Order> branchOrders = orderRepository.findByBranchId(branch.getId());
+            List<Order> branchOrders = orderRepository.findByBranchId(branch.getId())
+                    .stream().filter(o -> o.getStatus() != com.zosh.domain.OrderStatus.REFUNDED).collect(Collectors.toList());
             double rev = branchOrders.stream().mapToDouble(o -> o.getTotalAmount() != null ? o.getTotalAmount() : 0).sum();
             double avg = branchOrders.isEmpty() ? 0 : rev / branchOrders.size();
             int empCount = userRepository.findByBranchId(branch.getId()).size();
@@ -197,27 +225,23 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
 
     @Override
     public StoreAlertsDTO getStoreAlerts(Long storeAdminId) throws Exception {
-        userRepository.findById(storeAdminId).orElseThrow(() -> new Exception("User not found"));
-        Store store = storeRepository.findByStoreAdminId(storeAdminId);
-        if (store == null) {
-            return StoreAlertsDTO.builder()
-                    .inactiveCashiers(new ArrayList<>())
-                    .lowStockAlerts(new ArrayList<>())
-                    .noSaleToday(new ArrayList<>())
-                    .refundSpike(new ArrayList<>())
-                    .build();
-        }
-
+        Store store = resolveStoreAndValidateAccess(storeAdminId);
         Long storeId = store.getId();
         List<Branch> branches = branchRepository.findByStoreId(storeId);
+
         List<com.zosh.payload.dto.ProductDTO> lowStockAlerts = new ArrayList<>();
         List<com.zosh.payload.dto.BranchDTO> noSaleToday = new ArrayList<>();
+        List<com.zosh.payload.dto.UserDto> inactiveCashiers = new ArrayList<>();
+        List<Object> refundSpike = new ArrayList<>();
 
         LocalDate today = LocalDate.now();
+        LocalDateTime cutoffInactive = LocalDateTime.now().minusDays(7);
 
         for (Branch branch : branches) {
             List<Order> todayOrders = orderRepository.findByBranchIdAndCreatedAtBetween(
-                    branch.getId(), today.atStartOfDay(), today.plusDays(1).atStartOfDay());
+                    branch.getId(), today.atStartOfDay(), today.plusDays(1).atStartOfDay())
+                    .stream().filter(o -> o.getStatus() != com.zosh.domain.OrderStatus.REFUNDED)
+                    .collect(Collectors.toList());
             if (todayOrders.isEmpty()) {
                 noSaleToday.add(com.zosh.mapper.BranchMapper.toDTO(branch));
             }
@@ -230,13 +254,22 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
                     }
                 }
             }
+
+            List<User> branchCashiers = userRepository.findByBranchId(branch.getId());
+            for (User cashier : branchCashiers) {
+                if (cashier.getRole() == UserRole.ROLE_BRANCH_CASHIER) {
+                    if (cashier.getLastLogin() == null || cashier.getLastLogin().isBefore(cutoffInactive)) {
+                        inactiveCashiers.add(com.zosh.mapper.UserMapper.toDTO(cashier));
+                    }
+                }
+            }
         }
 
         return StoreAlertsDTO.builder()
-                .inactiveCashiers(new ArrayList<>())
+                .inactiveCashiers(inactiveCashiers)
                 .lowStockAlerts(lowStockAlerts)
                 .noSaleToday(noSaleToday)
-                .refundSpike(new ArrayList<>())
+                .refundSpike(refundSpike)
                 .build();
     }
 }

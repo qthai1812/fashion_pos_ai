@@ -7,25 +7,25 @@ export const signup = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const res = await api.post("/auth/signup", userData);
-      localStorage.setItem("jwt", res.data.data.jwt);
-      console.log("Signup success:", res.data.data);
-      return res.data.data;
+      const data = res.data;
+      localStorage.setItem("jwt", data.jwt);
+      console.log("Signup success:", data);
+      return data;
     } catch (err) {
       console.error("Signup error:", err);
       return rejectWithValue(err.response?.data?.message || "Signup failed");
     }
-  }
+  },
 );
 
 // ✅ Login
 export const login = createAsyncThunk(
   "auth/login",
   async (credentials, { rejectWithValue }) => {
-
     console.log("Credentials:", credentials);
     try {
       const res = await api.post("/auth/login", credentials);
-      const data = res.data.data;
+      const data = res.data;
       console.log("Login success:", data);
       localStorage.setItem("jwt", data.jwt);
       // Optional: Save token to localStorage
@@ -38,7 +38,7 @@ export const login = createAsyncThunk(
       console.error("Login error:", err);
       return rejectWithValue(err.response?.data?.message || "Login failed");
     }
-  }
+  },
 );
 
 // ✅ Forgot Password
@@ -51,9 +51,11 @@ export const forgotPassword = createAsyncThunk(
       return res.data;
     } catch (err) {
       console.error("Forgot password error:", err);
-      return rejectWithValue(err.response?.data?.message || "Failed to send reset email");
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to send reset email",
+      );
     }
-  }
+  },
 );
 
 // ✅ Reset Password
@@ -66,7 +68,9 @@ export const resetPassword = createAsyncThunk(
       return res.data;
     } catch (err) {
       console.error("Reset password error:", err);
-      return rejectWithValue(err.response?.data?.message || "Failed to reset password");
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to reset password",
+      );
     }
-  }
+  },
 );

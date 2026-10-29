@@ -1,15 +1,13 @@
 import React from "react";
 import { Routes, Route } from "react-router";
-
-// Import SuperAdmin pages
 import SuperAdminDashboard from "../pages/SuperAdminDashboard/SuperAdminDashboard";
 import Dashboard from "../pages/SuperAdminDashboard/Dashboard";
-
-
 import SubscriptionPlansPage from "../pages/SuperAdminDashboard/subscription/SubscriptionPlansPage";
 import StoreListPage from "../pages/SuperAdminDashboard/store/StoreListPage";
 import StoreDetailsPage from "../pages/SuperAdminDashboard/store/StoreDetailsPage";
 import PendingRequestsPage from "../pages/SuperAdminDashboard/store/PendingRequestsPage";
+import CommissionsPage from "../pages/SuperAdminDashboard/CommissionsPage";
+import ExportsPage from "../pages/SuperAdminDashboard/ExportsPage";
 import SettingsPage from "@/pages/SuperAdminDashboard/settings/SettingsPage";
 
 const SuperAdminRoutes = () => {
@@ -22,10 +20,12 @@ const SuperAdminRoutes = () => {
         <Route path="stores/:id" element={<StoreDetailsPage />} />
         <Route path="requests" element={<PendingRequestsPage />} />
         <Route path="subscriptions" element={<SubscriptionPlansPage />} />
+        <Route path="commissions" element={<CommissionsPage />} />
+        <Route path="exports" element={<ExportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>
   );
 };
 
-export default SuperAdminRoutes; 
+export default SuperAdminRoutes;

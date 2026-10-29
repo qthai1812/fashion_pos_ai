@@ -54,7 +54,7 @@ const OrderDetailsDialog = ({
                 <div>
                   <strong>Amount:</strong>{" "}
                   {selectedOrder.totalAmount
-                    ? `₹${selectedOrder.totalAmount}`
+                    ? `đ${selectedOrder.totalAmount}`
                     : "-"}
                 </div>
               </div>

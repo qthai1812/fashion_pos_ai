@@ -2,29 +2,27 @@ import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/use-toast'
-import { 
-  Eye, 
-  EyeOff, 
-  Mail, 
-  Lock, 
-  ShoppingCart, 
-  ArrowLeft,
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  ShoppingCart,
   CheckCircle
 } from 'lucide-react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { useDispatch, useSelector } from 'react-redux'
-import { login } from '@/Redux Toolkit/features/auth/authThunk'
+import { login, forgotPassword } from '@/Redux Toolkit/features/auth/authThunk'
 import { getUserProfile } from '../../../Redux Toolkit/features/user/userThunks'
 import { startShift } from '../../../Redux Toolkit/features/shiftReport/shiftReportThunks'
 import { ThemeToggle } from '../../../components/theme-toggle'
-import { forgotPassword } from '../../../Redux Toolkit/features/auth/authThunk'
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -35,7 +33,7 @@ const Login = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { error, loading } = useSelector((state) => state.auth)
+  const { loading } = useSelector((state) => state.auth)
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -56,24 +54,21 @@ const Login = () => {
           description: "Login successful!",
         })
 
-        const user=resultAction.payload.user;
+        const user = resultAction.payload.user
+        dispatch(getUserProfile(resultAction.payload.jwt))
 
-        console.log('Login success:', resultAction.payload.user.role)
-        dispatch(getUserProfile(resultAction.payload.jwt)); 
-        
-        
-        // Redirect based on user role
-        const userRole = user.role
-        if (userRole === 'ROLE_BRANCH_CASHIER') {
+        // Redirect based on user role (including ROLE_ADMIN for Super Admin)
+        const userRole = user?.role
+        if (userRole === 'ROLE_ADMIN') {
+          navigate('/super-admin/dashboard')
+        } else if (userRole === 'ROLE_BRANCH_CASHIER') {
           navigate('/cashier')
           dispatch(startShift(user.branchId))
-        
         } else if (userRole === 'ROLE_STORE_ADMIN' || userRole === 'ROLE_STORE_MANAGER') {
           navigate('/store')
         } else if (userRole === 'ROLE_BRANCH_MANAGER' || userRole === 'ROLE_BRANCH_ADMIN') {
           navigate('/branch')
         } else {
-          // Unknown role, redirect to landing page
           navigate('/')
         }
       } else {
@@ -83,10 +78,10 @@ const Login = () => {
           variant: "destructive",
         })
       }
-    } catch (error) {
+    } catch (err) {
       toast({
         title: "Error",
-        description: error.message || 'Login failed',
+        description: err?.message || 'Login failed',
         variant: "destructive",
       })
     } finally {
@@ -96,34 +91,30 @@ const Login = () => {
 
   const handleForgotPassword = async (e) => {
     e.preventDefault()
+    if (!forgotEmail.trim()) return
 
     try {
-      const resultAction = await dispatch(forgotPassword(forgotEmail))
-       if (forgotPassword.fulfilled.match(resultAction)) {
+      const resultAction = await dispatch(forgotPassword(forgotEmail.trim()))
+      if (forgotPassword.fulfilled.match(resultAction)) {
+        setEmailSent(true)
         toast({
           title: "Success",
           description: "Password reset email sent!",
         })
-      }else{
-        console.log("error", error)
+      } else {
         toast({
-        title: "Error",
-        description: error || 'Failed to send reset email',
-        variant: "destructive",
-      })
+          title: "Error",
+          description: resultAction.payload || 'Failed to send reset email',
+          variant: "destructive",
+        })
       }
-    } catch (error) {
-      console.log("error", error)
+    } catch (err) {
       toast({
         title: "Error",
-        description: error || 'Failed to send reset email',
+        description: err?.message || 'Failed to send reset email',
         variant: "destructive",
       })
-      return
     }
-
-    
-    
   }
 
   const resetForgotPassword = () => {
@@ -134,15 +125,12 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center p-4 relative">
-      {/* Theme Toggle */}
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
-      
+
       <div className="w-full max-w-md">
-        {/* Logo and Back Button */}
         <div className="text-center mb-8">
-         
           <div className="flex items-center justify-center space-x-2 mb-4">
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <ShoppingCart className="w-6 h-6 text-primary-foreground" />
@@ -153,7 +141,7 @@ const Login = () => {
             {showForgotPassword ? 'Reset Password' : 'Welcome Back'}
           </h1>
           <p className="text-muted-foreground mt-2">
-            {showForgotPassword 
+            {showForgotPassword
               ? 'Enter your email to receive reset instructions'
               : 'Sign in to your account to continue'
             }
@@ -162,9 +150,8 @@ const Login = () => {
 
         {/* Login Form */}
         {!showForgotPassword && !emailSent && (
-          <div className="bg-card rounded-2xl shadow-xl p-8">
+          <div className="bg-card rounded-2xl shadow-xl p-8 border border-border">
             <form onSubmit={handleLogin} className="space-y-6">
-              {/* Email Field */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
                   Email Address
@@ -186,7 +173,6 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Password Field */}
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
                   Password
@@ -219,14 +205,13 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Remember Me and Forgot Password */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <input
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
-                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
                   />
                   <label htmlFor="remember-me" className="ml-2 block text-sm text-foreground">
                     Remember me
@@ -241,7 +226,6 @@ const Login = () => {
                 </button>
               </div>
 
-              {/* Login Button */}
               <Button
                 type="submit"
                 className="w-full py-3 text-lg font-medium"
@@ -258,7 +242,6 @@ const Login = () => {
               </Button>
             </form>
 
-            {/* Divider */}
             <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -270,12 +253,13 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Demo Account Info */}
             <div className="mt-6 p-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground text-center">
-                <strong>Demo Account:</strong><br />
-                Email: demo@pospro.com<br />
-                Password: demo123
+                <strong>Demo Accounts (Password: 123456):</strong><br />
+                Super Admin: admin@pos.com<br />
+                Store Admin: storeadmin1@pos.com<br />
+                Branch Manager: manager.b1@pos.com<br />
+                Cashier: cashier.b1@pos.com
               </p>
             </div>
           </div>
@@ -283,7 +267,7 @@ const Login = () => {
 
         {/* Forgot Password Form */}
         {showForgotPassword && !emailSent && (
-          <div className="bg-card rounded-2xl shadow-xl p-8">
+          <div className="bg-card rounded-2xl shadow-xl p-8 border border-border">
             <form onSubmit={handleForgotPassword} className="space-y-6">
               <div>
                 <label htmlFor="forgot-email" className="block text-sm font-medium text-foreground mb-2">
@@ -321,7 +305,7 @@ const Login = () => {
                 >
                   {loading ? (
                     <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mr-2"></div>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground mr-2"></div>
                       Sending...
                     </div>
                   ) : (
@@ -335,7 +319,7 @@ const Login = () => {
 
         {/* Email Sent Success */}
         {emailSent && (
-          <div className="bg-card rounded-2xl shadow-xl p-8 text-center">
+          <div className="bg-card rounded-2xl shadow-xl p-8 text-center border border-border">
             <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
@@ -364,19 +348,9 @@ const Login = () => {
             </div>
           </div>
         )}
-
-        {/* Footer
-        <div className="text-center mt-8">
-          <p className="text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-primary hover:text-primary/80 font-medium">
-              Sign up
-            </Link>
-          </p>
-        </div> */}
       </div>
     </div>
   )
 }
 
-export default Login 
+export default Login

@@ -16,9 +16,14 @@ public class CustomerController {
 
     private final CustomerService customerService;
 
-    @PostMapping()
+    @PostMapping
     public ResponseEntity<Customer> create(@RequestBody Customer customer) {
         return ResponseEntity.ok(customerService.createCustomer(customer));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Customer> getById(@PathVariable Long id) throws Exception {
+        return ResponseEntity.ok(customerService.getCustomer(id));
     }
 
     @PutMapping("/{id}")
@@ -38,7 +43,7 @@ public class CustomerController {
         return ResponseEntity.ok(apiResponse);
     }
 
-    @GetMapping()
+    @GetMapping
     public ResponseEntity<List<Customer>> getAll() throws Exception {
         return ResponseEntity.ok(customerService.getAllCustomers());
     }
@@ -49,6 +54,4 @@ public class CustomerController {
     ) throws Exception {
         return ResponseEntity.ok(customerService.searchCustomers(q));
     }
-
-
 }

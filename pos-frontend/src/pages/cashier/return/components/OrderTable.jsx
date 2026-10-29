@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,13 +14,38 @@ import { formatDate } from "../../order/data";
 import { useSelector } from "react-redux";
 
 const OrderTable = ({ handleSelectOrder }) => {
-  const {
-    orders,
-    loading,
-    error
-  } = useSelector((state) => state.order);
+  const { orders = [], loading, error } = useSelector((state) => state.order);
+  const { refundsByBranch = [] } = useSelector((state) => state.refund);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const refundedOrderIds = new Set(
+    (refundsByBranch || []).map((r) => r.orderId),
+  );
+
+  const filteredOrders = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return orders;
+    return orders.filter(
+      (order) =>
+        String(order.id).toLowerCase().includes(q) ||
+        (order.customer?.fullName || "").toLowerCase().includes(q) ||
+        (order.paymentType || "").toLowerCase().includes(q),
+    );
+  }, [orders, searchQuery]);
+
   return (
     <div className="w-full p-4 flex flex-col">
+      <div className="mb-4 max-w-md relative">
+        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Search by Order ID, customer name, or payment mode..."
+          className="pl-9"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
       <div className="flex-1 overflow-auto">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
@@ -30,7 +55,7 @@ const OrderTable = ({ handleSelectOrder }) => {
           <div className="flex flex-col items-center justify-center h-full text-center text-destructive">
             <span>{error}</span>
           </div>
-        ) : orders.length > 0 ? (
+        ) : filteredOrders.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -43,17 +68,25 @@ const OrderTable = ({ handleSelectOrder }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.map((order) => (
+              {filteredOrders.map((order) => (
                 <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.id}</TableCell>
+                  <TableCell className="font-medium">#{order.id}</TableCell>
                   <TableCell>{formatDate(order.createdAt)}</TableCell>
-                  <TableCell>{order.customer?.fullName}</TableCell>
-                  <TableCell>₹{order.totalAmount?.toFixed(2)}</TableCell>
+                  <TableCell>
+                    {order.customer?.fullName || "Walk-in Customer"}
+                  </TableCell>
+                  <TableCell>đ{order.totalAmount?.toFixed(2)}</TableCell>
                   <TableCell>{order.paymentType}</TableCell>
                   <TableCell className="text-right">
-                    <Button onClick={() => handleSelectOrder(order)}>
-                      Select for Return
-                    </Button>
+                    {refundedOrderIds.has(order.id) ? (
+                      <Button disabled variant="secondary">
+                        Refunded
+                      </Button>
+                    ) : (
+                      <Button onClick={() => handleSelectOrder(order)}>
+                        Select for Return
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

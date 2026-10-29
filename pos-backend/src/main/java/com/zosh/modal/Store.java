@@ -1,6 +1,5 @@
 package com.zosh.modal;
 
-
 import com.zosh.domain.StoreStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,11 +11,12 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Store {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(nullable = false)
@@ -32,6 +32,7 @@ public class Store {
 
     private String storeType;
 
+    @Enumerated(EnumType.STRING)
     private StoreStatus status;
 
     @Embedded
@@ -40,12 +41,13 @@ public class Store {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        status = StoreStatus.PENDING;
+        if (status == null) {
+            status = StoreStatus.PENDING;
+        }
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
-
     }
 }

@@ -1,4 +1,3 @@
-
 import OrderInformation from "./OrderInformation";
 import CustomerInformation from "./CustomerInformation";
 import OrderItemTable from "../../../common/Order/OrderItemTable";
@@ -12,14 +11,12 @@ const OrderDetails = ({ selectedOrder }) => {
         <CustomerInformation selectedOrder={selectedOrder} />
       </div>
 
-       <Card>
+      <Card>
         <CardContent className="p-4">
           <h3 className="font-semibold mb-2">Order Items</h3>
           <OrderItemTable selectedOrder={selectedOrder} />
         </CardContent>
       </Card>
-
-     
     </div>
   );
 };

@@ -1,32 +1,34 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getStoreByAdmin } from "@/Redux Toolkit/features/store/storeThunks";
+import {
+  getStoreByAdmin,
+  updateStore,
+} from "@/Redux Toolkit/features/store/storeThunks";
 import { toast } from "@/components/ui/use-toast";
 import {
   SettingsHeader,
   SettingsNavigation,
-  SettingsContent
+  SettingsContent,
 } from "./components";
 
 export default function Settings() {
   const dispatch = useDispatch();
-  const { store} = useSelector((state) => state.store);
-  // Sample store settings data - in a real app, this would come from Redux
+  const { store } = useSelector((state) => state.store);
+
   const [storeSettings, setStoreSettings] = useState({
     storeName: "My POS Store",
     storeEmail: "contact@myposstore.com",
-    storePhone: "(555) 123-4567",
-    storeAddress: "123 Main St, Anytown, USA 12345",
+    storePhone: "0901234567",
+    storeAddress: "Hà Nội, Việt Nam",
     storeLogo: "/logo.png",
-    storeDescription: "A modern point of sale system for retail businesses.",
-    currency: "USD",
-    taxRate: "7.5",
-    timezone: "America/New_York",
-    dateFormat: "MM/DD/YYYY",
-    receiptFooter: "Thank you for shopping with us!",
+    storeDescription: "Hệ thống quản lý bán hàng đa chi nhánh.",
+    currency: "VND",
+    taxRate: "10",
+    timezone: "Asia/Ho_Chi_Minh",
+    dateFormat: "DD/MM/YYYY",
+    receiptFooter: "Cảm ơn quý khách đã mua hàng!",
   });
 
-  // Sample notification settings
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
     smsNotifications: false,
@@ -35,7 +37,6 @@ export default function Settings() {
     employeeActivity: true,
   });
 
-  // Sample security settings
   const [securitySettings, setSecuritySettings] = useState({
     twoFactorAuth: false,
     passwordExpiry: "90",
@@ -43,7 +44,6 @@ export default function Settings() {
     ipRestriction: false,
   });
 
-  // Sample payment settings
   const [paymentSettings, setPaymentSettings] = useState({
     acceptCash: true,
     acceptCredit: true,
@@ -55,8 +55,19 @@ export default function Settings() {
 
   const [activeSection, setActiveSection] = useState("store-settings");
 
-  // Fetch store data on component mount
   useEffect(() => {
+    const savedPrefs = localStorage.getItem("pos_store_preferences");
+    if (savedPrefs) {
+      try {
+        const parsed = JSON.parse(savedPrefs);
+        if (parsed.notificationSettings)
+          setNotificationSettings(parsed.notificationSettings);
+        if (parsed.securitySettings)
+          setSecuritySettings(parsed.securitySettings);
+        if (parsed.paymentSettings) setPaymentSettings(parsed.paymentSettings);
+      } catch (_) {}
+    }
+
     const fetchStoreData = async () => {
       try {
         await dispatch(getStoreByAdmin()).unwrap();
@@ -72,7 +83,6 @@ export default function Settings() {
     fetchStoreData();
   }, [dispatch]);
 
-  // Update store settings when store data is loaded
   useEffect(() => {
     if (store) {
       setStoreSettings({
@@ -81,44 +91,74 @@ export default function Settings() {
         storePhone: store.contact?.phone || "",
         storeAddress: store.contact?.address || "",
         storeDescription: store.description || "",
-        currency: store.currency || "USD",
-        taxRate: store.taxRate?.toString() || "0",
-        timezone: store.timezone || "America/New_York",
-        dateFormat: store.dateFormat || "MM/DD/YYYY",
-        receiptFooter: store.receiptFooter || "",
+        currency: store.currency || "VND",
+        taxRate: store.taxRate?.toString() || "10",
+        timezone: store.timezone || "Asia/Ho_Chi_Minh",
+        dateFormat: store.dateFormat || "DD/MM/YYYY",
+        receiptFooter: store.receiptFooter || "Cảm ơn quý khách đã mua hàng!",
       });
     }
   }, [store]);
 
   const handleStoreSettingsChange = (name, value) => {
-    setStoreSettings({
-      ...storeSettings,
-      [name]: value,
-    });
+    setStoreSettings((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleNotificationSettingsChange = (name, value) => {
-    setNotificationSettings({
-      ...notificationSettings,
-      [name]: value,
-    });
+    setNotificationSettings((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSecuritySettingsChange = (name, value) => {
-    setSecuritySettings({
-      ...securitySettings,
-      [name]: value,
-    });
+    setSecuritySettings((prev) => ({ ...prev, [name]: value }));
   };
 
   const handlePaymentSettingsChange = (name, value) => {
-    setPaymentSettings({
-      ...paymentSettings,
-      [name]: value,
-    });
+    setPaymentSettings((prev) => ({ ...prev, [name]: value }));
   };
 
-  
+  const handleSaveAll = async () => {
+    localStorage.setItem(
+      "pos_store_preferences",
+      JSON.stringify({
+        notificationSettings,
+        securitySettings,
+        paymentSettings,
+      }),
+    );
+
+    if (store?.id) {
+      try {
+        await dispatch(
+          updateStore({
+            id: store.id,
+            storeData: {
+              brand: storeSettings.storeName,
+              description: storeSettings.storeDescription,
+              storeType: store.storeType || "Retail",
+              contact: {
+                email: storeSettings.storeEmail,
+                phone: storeSettings.storePhone,
+                address: storeSettings.storeAddress,
+              },
+            },
+          }),
+        ).unwrap();
+      } catch (err) {
+        toast({
+          title: "Error Saving Store Profile",
+          description: err || "Could not update store profile on server.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    toast({
+      title: "All Settings Saved",
+      description:
+        "Store profile, notifications, security, and payment settings have been saved.",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -126,7 +166,10 @@ export default function Settings() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
-          <SettingsNavigation activeSection={activeSection} />
+          <SettingsNavigation
+            activeSection={activeSection}
+            onSelectSection={setActiveSection}
+          />
         </div>
 
         <div className="md:col-span-2">
@@ -139,6 +182,7 @@ export default function Settings() {
             onNotificationSettingsChange={handleNotificationSettingsChange}
             onSecuritySettingsChange={handleSecuritySettingsChange}
             onPaymentSettingsChange={handlePaymentSettingsChange}
+            onSaveAll={handleSaveAll}
           />
         </div>
       </div>

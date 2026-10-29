@@ -1,12 +1,12 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 import {
   createInventory,
   updateInventory,
   deleteInventory,
   getInventoryById,
   getInventoryByBranch,
-  getInventoryByProduct
-} from './inventoryThunks';
+  getInventoryByProduct,
+} from "./inventoryThunks";
 
 const initialState = {
   inventories: [],
@@ -16,7 +16,7 @@ const initialState = {
 };
 
 const inventorySlice = createSlice({
-  name: 'inventory',
+  name: "inventory",
   initialState,
   reducers: {
     clearInventoryState: (state) => {
@@ -32,7 +32,14 @@ const inventorySlice = createSlice({
       })
       .addCase(createInventory.fulfilled, (state, action) => {
         state.loading = false;
-        state.inventories.push(action.payload);
+        const index = state.inventories.findIndex(
+          (inv) => inv.id === action.payload.id,
+        );
+        if (index !== -1) {
+          state.inventories[index] = action.payload;
+        } else {
+          state.inventories.push(action.payload);
+        }
       })
       .addCase(createInventory.rejected, (state, action) => {
         state.loading = false;
@@ -40,12 +47,16 @@ const inventorySlice = createSlice({
       })
 
       .addCase(updateInventory.fulfilled, (state, action) => {
-        const index = state.inventories.findIndex(inv => inv.id === action.payload.id);
+        const index = state.inventories.findIndex(
+          (inv) => inv.id === action.payload.id,
+        );
         if (index !== -1) state.inventories[index] = action.payload;
       })
 
       .addCase(deleteInventory.fulfilled, (state, action) => {
-        state.inventories = state.inventories.filter(inv => inv.id !== action.payload);
+        state.inventories = state.inventories.filter(
+          (inv) => inv.id !== action.payload,
+        );
       })
 
       .addCase(getInventoryById.fulfilled, (state, action) => {
@@ -61,10 +72,12 @@ const inventorySlice = createSlice({
       })
 
       .addMatcher(
-        (action) => action.type.startsWith('inventory/') && action.type.endsWith('/rejected'),
+        (action) =>
+          action.type.startsWith("inventory/") &&
+          action.type.endsWith("/rejected"),
         (state, action) => {
           state.error = action.payload;
-        }
+        },
       );
   },
 });

@@ -43,6 +43,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
         plan.setPrioritySupport(dto.getPrioritySupport());
         plan.setMultiLocation(dto.getMultiLocation());
         plan.setDescription(dto.getDescription());
+        plan.setExtraFeatures(dto.getExtraFeatures());
 
         SubscriptionPlan updated = subscriptionPlanRepository.save(plan);
         return toDTO(updated);
@@ -92,6 +93,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
                 .description(plan.getDescription())
                 .createdAt(plan.getCreatedAt())
                 .updatedAt(plan.getUpdatedAt())
+                .extraFeatures(plan.getExtraFeatures())
                 .build();
     }
 
@@ -112,6 +114,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
                 .prioritySupport(dto.getPrioritySupport())
                 .multiLocation(dto.getMultiLocation())
                 .description(dto.getDescription())
+                .extraFeatures(dto.getExtraFeatures())
                 .build();
     }
 }

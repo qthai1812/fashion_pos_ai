@@ -4,8 +4,10 @@ import com.zosh.domain.PaymentGateway;
 import com.zosh.domain.SubscriptionStatus;
 import com.zosh.modal.Store;
 import com.zosh.modal.Subscription;
+import com.zosh.modal.SubscriptionPlan;
 import com.zosh.payload.dto.SubscriptionDTO;
 import com.zosh.repository.StoreRepository;
+import com.zosh.repository.SubscriptionPlanRepository;
 import com.zosh.repository.SubscriptionRepository;
 import com.zosh.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,6 +25,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final StoreRepository storeRepository;
+    private final SubscriptionPlanRepository subscriptionPlanRepository;
 
     private SubscriptionDTO toDTO(Subscription s) {
         SubscriptionDTO dto = new SubscriptionDTO();
@@ -45,44 +49,83 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public SubscriptionDTO subscribe(Long storeId, String planId, PaymentGateway gateway, String transactionId) throws Exception {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new Exception("Store not found: " + storeId));
 
+        // Hủy các gói ACTIVE cũ của cửa hàng trước khi kích hoạt gói mới
+        List<Subscription> activeSubs = subscriptionRepository.findByStoreIdAndStatus(storeId, SubscriptionStatus.ACTIVE);
+        for (Subscription oldSub : activeSubs) {
+            oldSub.setStatus(SubscriptionStatus.CANCELLED);
+            subscriptionRepository.save(oldSub);
+        }
+
+        SubscriptionPlan matchedPlan = null;
+        if (planId != null) {
+            try {
+                Long numericPlanId = Long.parseLong(planId.trim());
+                Optional<SubscriptionPlan> planOpt = subscriptionPlanRepository.findById(numericPlanId);
+                if (planOpt.isPresent()) {
+                    matchedPlan = planOpt.get();
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        String resolvedName = matchedPlan != null ? matchedPlan.getName() : resolvePlanName(planId);
+        Double amount = matchedPlan != null ? matchedPlan.getPrice() : 0.0;
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime endDate = (matchedPlan != null && "YEARLY".equalsIgnoreCase(matchedPlan.getBillingCycle()))
+                ? now.plusYears(1)
+                : now.plusMonths(1);
+
         Subscription subscription = Subscription.builder()
                 .store(store)
                 .planId(planId)
-                .planName(resolvePlanName(planId))
-                .status(SubscriptionStatus.PENDING)
+                .planName(resolvedName)
+                .amount(amount)
+                .status(SubscriptionStatus.ACTIVE)
                 .gateway(gateway != null ? gateway : PaymentGateway.RAZORPAY)
                 .transactionId(transactionId)
-                .startDate(LocalDateTime.now())
-                .endDate(LocalDateTime.now().plusMonths(1))
-                .currency("INR")
+                .startDate(now)
+                .endDate(endDate)
+                .currency("VND")
                 .build();
+
         return toDTO(subscriptionRepository.save(subscription));
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public SubscriptionDTO upgrade(Long storeId, String planId, PaymentGateway gateway, String transactionId) throws Exception {
         return subscribe(storeId, planId, gateway, transactionId);
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public SubscriptionDTO activate(Long subscriptionId) throws Exception {
         Subscription sub = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new Exception("Subscription not found: " + subscriptionId));
         sub.setStatus(SubscriptionStatus.ACTIVE);
-        sub.setStartDate(LocalDateTime.now());
-        sub.setEndDate(LocalDateTime.now().plusMonths(1));
+        LocalDateTime now = LocalDateTime.now();
+        sub.setStartDate(now);
+
+        boolean isYearly = false;
+        if (sub.getPlanId() != null) {
+            try {
+                Long numericPlanId = Long.parseLong(sub.getPlanId().trim());
+                isYearly = subscriptionPlanRepository.findById(numericPlanId)
+                        .map(p -> "YEARLY".equalsIgnoreCase(p.getBillingCycle()))
+                        .orElse(false);
+            } catch (NumberFormatException ignored) {}
+        }
+        sub.setEndDate(isYearly ? now.plusYears(1) : now.plusMonths(1));
         return toDTO(subscriptionRepository.save(sub));
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public SubscriptionDTO cancel(Long subscriptionId) throws Exception {
         Subscription sub = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new Exception("Subscription not found: " + subscriptionId));
@@ -91,7 +134,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public SubscriptionDTO updatePaymentStatus(Long subscriptionId, SubscriptionStatus status) throws Exception {
         Subscription sub = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new Exception("Subscription not found: " + subscriptionId));
@@ -100,6 +143,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SubscriptionDTO> getStoreSubscriptions(Long storeId, SubscriptionStatus status) throws Exception {
         List<Subscription> subs = status != null
                 ? subscriptionRepository.findByStoreIdAndStatus(storeId, status)
@@ -108,6 +152,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SubscriptionDTO> getAllSubscriptions(SubscriptionStatus status) throws Exception {
         List<Subscription> subs = status != null
                 ? subscriptionRepository.findByStatus(status)
@@ -116,6 +161,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SubscriptionDTO> getExpiringSubscriptions(int days) throws Exception {
         LocalDateTime cutoff = LocalDateTime.now().plusDays(days);
         return subscriptionRepository.findByEndDateBeforeAndStatus(cutoff, SubscriptionStatus.ACTIVE)
@@ -123,6 +169,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public long countByStatus(SubscriptionStatus status) throws Exception {
         return subscriptionRepository.countByStatus(status);
     }
