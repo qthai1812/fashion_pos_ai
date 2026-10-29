@@ -34,13 +34,7 @@ public class EmployeeController {
         return ResponseEntity.ok(employee);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<User> updateEmployee(
-            @PathVariable Long id,
-            @RequestBody UserDto userDto) throws Exception {
-        User employee = employeeService.updateEmployee(id, userDto);
-        return ResponseEntity.ok(employee);
-    }
+
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse> deleteEmployee(
@@ -51,19 +45,39 @@ public class EmployeeController {
         return ResponseEntity.ok(apiResponse);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<UserDto> findEmployeeById(
+            @PathVariable Long id) throws Exception {
+        return ResponseEntity.ok(employeeService.findEmployeeById(id));
+    }
+    @PutMapping("/{id}")
+    public ResponseEntity<UserDto> updateEmployee(
+            @PathVariable Long id,
+            @RequestBody UserDto userDto) throws Exception {
+        User employee = employeeService.updateEmployee(id, userDto);
+        return ResponseEntity.ok(com.zosh.mapper.UserMapper.toDTO(employee));
+    }
+
     @GetMapping("/store/{id}")
     public ResponseEntity<List<UserDto>> storeEmployee(
             @PathVariable Long id,
+            @RequestParam(required = false) UserRole role,
             @RequestParam(required = false) UserRole userRole) throws Exception {
-        List<UserDto> employee = employeeService.findStoreEmployees(id, userRole);
+        UserRole effectiveRole = role != null ? role : userRole;
+        List<UserDto> employee = employeeService.findStoreEmployees(id, effectiveRole);
         return ResponseEntity.ok(employee);
     }
 
     @GetMapping("/branch/{id}")
     public ResponseEntity<List<UserDto>> branchEmployee(
             @PathVariable Long id,
+            @RequestParam(required = false) UserRole role,
             @RequestParam(required = false) UserRole userRole) throws Exception {
-        List<UserDto> employee = employeeService.findBranchEmployees(id, userRole);
+        UserRole effectiveRole = role != null ? role : userRole;
+        List<UserDto> employee = employeeService.findBranchEmployees(id, effectiveRole);
         return ResponseEntity.ok(employee);
     }
+
+
+
 }

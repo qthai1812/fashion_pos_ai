@@ -24,6 +24,25 @@ public class Customer {
 
     private String phone;
 
+    @Builder.Default
+    private Integer loyaltyPoints = 0;
+
     private LocalDateTime createdAt;
+
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+        if (this.loyaltyPoints == null) {
+            this.loyaltyPoints = 0;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

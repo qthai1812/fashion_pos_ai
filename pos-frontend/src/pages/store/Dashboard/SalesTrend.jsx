@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Calendar } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import {
   getSalesTrends,
   getDailySales,
@@ -27,7 +27,7 @@ const SalesTrend = () => {
   const dispatch = useDispatch();
   const { toast } = useToast();
   const { salesTrends, dailySales, loading } = useSelector(
-    (state) => state.storeAnalytics
+    (state) => state.storeAnalytics,
   );
   const { userProfile } = useSelector((state) => state.user);
   const [period, setPeriod] = useState("daily");
@@ -44,7 +44,7 @@ const SalesTrend = () => {
         await dispatch(getDailySales(userProfile.id)).unwrap();
       } else {
         await dispatch(
-          getSalesTrends({ storeAdminId: userProfile.id, period })
+          getSalesTrends({ storeAdminId: userProfile.id, period }),
         ).unwrap();
       }
     } catch (err) {
@@ -56,17 +56,16 @@ const SalesTrend = () => {
     }
   };
 
-  // Format currency for tooltip
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(value);
+    }).format(value || 0);
   };
 
-  // Get chart data based on period
+  // Mapped to Backend DailySalesDTO ({ date, totalSales, totalOrders }) & SalesTrendDTO ({ period, totalSales })
   const getChartData = () => {
     if (period === "daily" && dailySales) {
       return dailySales.map((item) => ({
@@ -74,12 +73,12 @@ const SalesTrend = () => {
           month: "short",
           day: "numeric",
         }),
-        sales: item.totalAmount,
+        sales: Number(item.totalSales ?? item.totalAmount ?? 0),
       }));
     } else if (salesTrends) {
       return salesTrends.map((item) => ({
         date: item.period,
-        sales: item.totalSales,
+        sales: Number(item.totalSales ?? item.totalAmount ?? 0),
       }));
     }
     return [];
@@ -109,7 +108,9 @@ const SalesTrend = () => {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-              <p className="mt-2 text-gray-500">Loading sales data...</p>
+              <p className="mt-2 text-muted-foreground">
+                Loading sales data...
+              </p>
             </div>
           </div>
         ) : chartData.length > 0 ? (
@@ -127,7 +128,7 @@ const SalesTrend = () => {
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => `₹${value}`}
+                tickFormatter={(value) => `đ${value}`}
               />
               <Tooltip
                 formatter={(value) => [formatCurrency(value), "Sales"]}
@@ -147,7 +148,9 @@ const SalesTrend = () => {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <TrendingUp className="w-16 h-16 text-emerald-500 mx-auto" />
-              <p className="mt-2 text-gray-500">No sales data available</p>
+              <p className="mt-2 text-muted-foreground">
+                No sales data available
+              </p>
             </div>
           </div>
         )}

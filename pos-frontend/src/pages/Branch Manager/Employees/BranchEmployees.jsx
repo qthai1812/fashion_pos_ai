@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus } from "lucide-react";
+import { Search } from "lucide-react";
 import { branchAdminRole } from "../../../utils/userRole";
-
+import { useToast } from "@/components/ui/use-toast";
 import EmployeeStats from "./EmployeeStats";
 import EmployeeTable from "./EmployeeTable";
 import {
@@ -13,8 +12,7 @@ import {
   ResetPasswordDialog,
   PerformanceDialog,
 } from "./EmployeeDialogs";
-import { useDispatch } from "react-redux";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   createBranchEmployee,
   findBranchEmployees,
@@ -22,107 +20,133 @@ import {
 } from "../../../Redux Toolkit/features/employee/employeeThunks";
 
 const getStatusColor = (status) => {
-  if (status === "Active") {
-    return "text-green-500";
-  } else if (status === "Inactive") {
-    return "text-red-500";
-  } else {
-    return "text-gray-500";
-  }
+  if (status === "Active") return "text-green-500";
+  if (status === "Inactive") return "text-red-500";
+  return "text-muted-foreground";
 };
 
 const BranchEmployees = () => {
-  // const [employees, setEmployees] = useState([]); // Initialize with empty array
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] =
-    useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [isPerformanceDialogOpen, setIsPerformanceDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [accessOverrides, setAccessOverrides] = useState({});
+
   const dispatch = useDispatch();
-  // const { store } = useSelector((state) => state);
   const { branch } = useSelector((state) => state.branch);
-  const {employees}=useSelector((state)=>state.employee)
+  const { employees } = useSelector((state) => state.employee);
   const { userProfile } = useSelector((state) => state.user);
-
-
-  console.log("branch employees", employees);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
   };
 
+  const filteredEmployees = (employees || [])
+    .map((emp) => ({
+      ...emp,
+      loginAccess:
+        accessOverrides[emp.id] !== undefined
+          ? accessOverrides[emp.id]
+          : emp.loginAccess !== false,
+    }))
+    .filter(
+      (emp) =>
+        emp.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.phone?.includes(searchTerm) ||
+        emp.role?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
   const handleAddEmployee = (newEmployeeData) => {
-    if (branch?.id && userProfile.branchId) {
+    const targetBranchId = branch?.id || userProfile?.branchId;
+    if (targetBranchId) {
       const data = {
         employee: {
           ...newEmployeeData,
-
           username: newEmployeeData.email.split("@")[0],
         },
-        branchId: branch.id,
+        branchId: targetBranchId,
         token: localStorage.getItem("jwt"),
       };
-      console.log("branch employee data ", data);
       dispatch(createBranchEmployee(data));
       setIsAddDialogOpen(false);
+      toast({
+        title: "Employee Created",
+        description: `${newEmployeeData.fullName} has been added to the branch.`,
+      });
     }
   };
 
   const handleEditEmployee = (updatedEmployeeData) => {
     if (selectedEmployee?.id && localStorage.getItem("jwt")) {
-      const data={
-          employeeId: selectedEmployee.id,
-          employeeDetails: updatedEmployeeData,
-          token: localStorage.getItem("jwt"),
-
-        }
-      dispatch(
-        updateEmployee(data)
-      );
+      const data = {
+        employeeId: selectedEmployee.id,
+        employeeDetails: updatedEmployeeData,
+        token: localStorage.getItem("jwt"),
+      };
+      dispatch(updateEmployee(data));
       setIsEditDialogOpen(false);
+      toast({
+        title: "Employee Updated",
+        description: `${updatedEmployeeData.fullName}'s details were saved.`,
+      });
     }
   };
 
-    useEffect(() => {
-      if (branch?.id) {
-        dispatch(
-          findBranchEmployees({
-            branchId: branch?.id
-          })
-        );
-      }
-    }, [dispatch, branch?.id]);
-
-  // const handleEditEmployee = (updatedEmployeeData) => {
-  //   const updatedEmployees = employees.map((employee) =>
-  //     employee.id === updatedEmployeeData.id
-  //       ? {
-  //           ...updatedEmployeeData,
-  //           status: updatedEmployeeData.loginAccess ? "Active" : "Inactive",
-  //         }
-  //       : employee
-  //   );
-  //   setEmployees(updatedEmployees);
-  //   setIsEditDialogOpen(false);
-  // };
+  useEffect(() => {
+    if (branch?.id) {
+      dispatch(findBranchEmployees({ branchId: branch.id }));
+    }
+  }, [dispatch, branch?.id]);
 
   const handleToggleAccess = (employee) => {
-    const updatedEmployees = employees.map((emp) =>
-      emp.id === employee.id
-        ? {
-            ...emp,
-            loginAccess: !emp.loginAccess,
-            status: !emp.loginAccess ? "Inactive" : "Active",
-          }
-        : emp
-    );
-    // setEmployees(updatedEmployees);
+    const nextAccess = !(employee.loginAccess !== false);
+    setAccessOverrides((prev) => ({ ...prev, [employee.id]: nextAccess }));
+
+    if (employee?.id && localStorage.getItem("jwt")) {
+      dispatch(
+        updateEmployee({
+          employeeId: employee.id,
+          employeeDetails: {
+            ...employee,
+            loginAccess: nextAccess,
+          },
+          token: localStorage.getItem("jwt"),
+        })
+      );
+      toast({
+        title: nextAccess ? "Login Access Enabled" : "Login Access Disabled",
+        description: `${employee.fullName}'s login access is now ${
+          nextAccess ? "enabled" : "disabled"
+        }.`,
+      });
+    }
   };
 
-  const handleResetPassword = () => {
-    console.log(`Password reset for ${selectedEmployee.name}`);
+  const handleResetPassword = async () => {
+    if (!selectedEmployee) return;
+    const tempPassword = `Pos@${Math.floor(100000 + Math.random() * 900000)}`;
+    if (selectedEmployee.id && localStorage.getItem("jwt")) {
+      await dispatch(
+        updateEmployee({
+          employeeId: selectedEmployee.id,
+          employeeDetails: {
+            ...selectedEmployee,
+            password: tempPassword,
+          },
+          token: localStorage.getItem("jwt"),
+        })
+      );
+    }
+    toast({
+      title: "Temporary Password Generated",
+      description: `Password for ${
+        selectedEmployee.fullName || selectedEmployee.email
+      } has been reset to: ${tempPassword}`,
+    });
     setIsResetPasswordDialogOpen(false);
   };
 
@@ -143,10 +167,8 @@ const BranchEmployees = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Employee Management
-        </h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-3xl font-bold tracking-tight">Employee Management</h1>
         <AddEmployeeDialog
           isAddDialogOpen={isAddDialogOpen}
           setIsAddDialogOpen={setIsAddDialogOpen}
@@ -154,9 +176,26 @@ const BranchEmployees = () => {
           roles={branchAdminRole}
         />
       </div>
-      <EmployeeStats employees={employees} />
+
+      <EmployeeStats employees={filteredEmployees} />
+
+      <Card>
+        <CardContent className="p-4">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search employees by name, email, role..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={handleSearch}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <EmployeeTable
-        employees={employees}
+        employees={filteredEmployees}
         getStatusColor={getStatusColor}
         handleToggleAccess={handleToggleAccess}
         openEditDialog={openEditDialog}

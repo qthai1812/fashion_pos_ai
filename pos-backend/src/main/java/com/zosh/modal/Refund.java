@@ -35,7 +35,7 @@ public class Refund {
 
     @ManyToOne
     private Branch branch;
-
+    @Enumerated(EnumType.STRING)
     private PaymentType paymentType;
 
     private LocalDateTime createdAt;

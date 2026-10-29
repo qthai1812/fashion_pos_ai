@@ -1,11 +1,5 @@
 package com.zosh.payload.dto;
 
-import com.zosh.modal.Store;
-import com.zosh.modal.User;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -43,5 +37,7 @@ public class BranchDTO {
     private Long storeId;
 
     private UserDto manager;
+
+    private String managerName;
 
 }

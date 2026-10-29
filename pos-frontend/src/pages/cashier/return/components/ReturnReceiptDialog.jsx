@@ -8,26 +8,28 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PrinterIcon } from "lucide-react";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 
 const ReturnReceiptDialog = ({
   showReceiptDialog,
   setShowReceiptDialog,
   selectedOrder,
-  // returnItems,
-  // calculateRefundAmount,
-  // refundMethod,
-
-  // returnReason,
-  // otherReason,
-  // finishReturn,
+  returnReason,
+  refundMethod,
 }) => (
   <Dialog open={showReceiptDialog} onOpenChange={setShowReceiptDialog}>
     <DialogContent>
       <DialogHeader>
         <DialogTitle>Return Receipt</DialogTitle>
       </DialogHeader>
-      <div className="bg-white p-6 max-h-96 overflow-y-auto">
+      <div className="bg-background text-foreground p-6 max-h-96 overflow-y-auto border rounded-md">
         <div className="text-center mb-4">
           <h3 className="font-bold text-lg">POS SYSTEM</h3>
           <p className="text-sm">123 Main Street, City</p>
@@ -42,7 +44,7 @@ const ReturnReceiptDialog = ({
             {Date.now().toString().substring(8)}
           </p>
           <p className="text-sm">
-            <span className="font-medium">Original Order:</span>{" "}
+            <span className="font-medium">Original Order:</span> #
             {selectedOrder?.id}
           </p>
           <p className="text-sm">
@@ -51,7 +53,7 @@ const ReturnReceiptDialog = ({
           </p>
           <p className="text-sm">
             <span className="font-medium">Customer:</span>{" "}
-            {selectedOrder?.customer.fullName}
+            {selectedOrder?.customer?.fullName || "Walk-in Customer"}
           </p>
         </div>
         <Table className="w-full text-sm mb-4">
@@ -64,35 +66,46 @@ const ReturnReceiptDialog = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {selectedOrder.items
-              
-              .map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="py-2">{item.product?.name.slice(0, 20)+"..."}</TableCell>
-                  <TableCell className="text-center py-2">{item.returnQuantity}</TableCell>
-                  <TableCell className="text-right py-2">₹{item.product?.sellingPrice?.toFixed(2)}</TableCell>
-                  <TableCell className="text-right py-2">
-                    ₹{(item.product.sellingPrice * item.returnQuantity)?.toFixed(2)}
-                  </TableCell>
-                </TableRow>
-              ))}
+            {(selectedOrder?.items || []).map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="py-2">
+                  {item.product?.name
+                    ? item.product.name.length > 20
+                      ? item.product.name.slice(0, 20) + "..."
+                      : item.product.name
+                    : "Unknown Product"}
+                </TableCell>
+                <TableCell className="text-center py-2">
+                  {item.quantity || 1}
+                </TableCell>
+                <TableCell className="text-right py-2">
+                  đ{item.product?.sellingPrice?.toFixed(2)}
+                </TableCell>
+                <TableCell className="text-right py-2">
+                  đ
+                  {(
+                    (item.product?.sellingPrice || 0) * (item.quantity || 1)
+                  ).toFixed(2)}
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
         <div className="space-y-1 text-sm mb-4">
           <div className="flex justify-between font-bold border-t pt-1">
             <span>Total Refund</span>
-            <span>₹{selectedOrder.totalAmount}</span>
+            <span>đ{selectedOrder?.totalAmount}</span>
           </div>
           <div className="flex justify-between pt-1">
             <span>Refund Method</span>
-            <span>
-              {selectedOrder.paymentType}
-            </span>
+            <span>{refundMethod || selectedOrder?.paymentType}</span>
           </div>
-          <div className="flex justify-between pt-1">
-            <span>Return Reason</span>
-            {/* <span>{returnReason === "Other" ? otherReason : returnReason}</span> */}
-          </div>
+          {returnReason && (
+            <div className="flex justify-between pt-1">
+              <span>Return Reason</span>
+              <span>{returnReason}</span>
+            </div>
+          )}
         </div>
         <div className="text-center text-sm mt-6">
           <p>Thank you for shopping with us!</p>
@@ -102,11 +115,16 @@ const ReturnReceiptDialog = ({
           </p>
         </div>
       </div>
-      <DialogFooter>
-        <Button variant="outline" className="gap-2" >
+      <DialogFooter className="flex justify-between w-full">
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => window.print()}
+        >
           <PrinterIcon className="h-4 w-4" />
-          Print & Complete
+          Print
         </Button>
+        <Button onClick={() => setShowReceiptDialog(false)}>Complete</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

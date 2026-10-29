@@ -58,6 +58,11 @@ const navLinks = [
     path: "/store/sales",
     icon: <BarChart2 className="w-5 h-5" />,
   },
+  {
+    name: "Coupons",
+    path: "/store/coupons",
+    icon: <Tag className="w-5 h-5" />,
+  },
 
   {
     name: "Reports",

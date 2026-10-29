@@ -19,6 +19,7 @@ import Stores from "../pages/store/storeInformation/Stores";
 import PricingSection from "../pages/common/Landing/PricingSection";
 import Upgrade from "../pages/store/upgrade/Upgrade";
 import Alerts from "../pages/store/Alerts/Alerts";
+import Coupons from "../pages/store/store-admin/Coupons";
 
 const StoreRoutes = () => {
   return (
@@ -33,6 +34,7 @@ const StoreRoutes = () => {
         <Route path="stores" element={<Stores />} />
         
         <Route path="sales" element={<Sales />} />
+        <Route path="coupons" element={<Coupons />} />
       
         <Route path="reports" element={<Reports />} />
         <Route path="upgrade" element={<Upgrade />} />

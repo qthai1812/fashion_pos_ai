@@ -1,10 +1,6 @@
 package com.zosh.payload.dto;
 
 import com.zosh.modal.*;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Transient;
 import lombok.Builder;
 import lombok.Data;
 

@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface RefundRepository extends JpaRepository<Refund, Long> {
 
+    boolean existsByOrderId(Long orderId);
     List<Refund> findByCashierIdAndCreatedAtBetween(
             Long cashier,
             LocalDateTime from,

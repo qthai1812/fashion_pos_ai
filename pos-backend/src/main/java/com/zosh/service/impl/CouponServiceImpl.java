@@ -40,56 +40,6 @@ public class CouponServiceImpl implements CouponService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public CouponDTO createCoupon(CouponDTO dto) throws Exception {
-        User user = userService.getCurrentUser();
-        Store store = storeRepository.findById(dto.getStoreId())
-                .orElseThrow(() -> new Exception("Store not found"));
-
-        if (user.getRole() != UserRole.ROLE_STORE_ADMIN
-                && user.getRole() != UserRole.ROLE_STORE_MANAGER
-                && user.getRole() != UserRole.ROLE_ADMIN) {
-            throw new Exception("Only store admin can create coupons");
-        }
-
-        Coupon coupon = Coupon.builder()
-                .code(dto.getCode().trim().toUpperCase())
-                .discountType(dto.getDiscountType())
-                .discountValue(dto.getDiscountValue())
-                .minOrderValue(dto.getMinOrderValue())
-                .validFrom(dto.getValidFrom())
-                .validUntil(dto.getValidUntil())
-                .isActive(dto.getIsActive() != null ? dto.getIsActive() : true)
-                .store(store)
-                .build();
-
-        return mapToDto(couponRepository.save(coupon));
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public CouponDTO updateCoupon(Long id, CouponDTO dto) throws Exception {
-        Coupon coupon = couponRepository.findById(id).orElseThrow(() -> new Exception("Coupon not found"));
-
-        if (dto.getCode() != null) coupon.setCode(dto.getCode().trim().toUpperCase());
-        if (dto.getDiscountType() != null) coupon.setDiscountType(dto.getDiscountType());
-        if (dto.getDiscountValue() != null) coupon.setDiscountValue(dto.getDiscountValue());
-        if (dto.getMinOrderValue() != null) coupon.setMinOrderValue(dto.getMinOrderValue());
-        if (dto.getValidFrom() != null) coupon.setValidFrom(dto.getValidFrom());
-        if (dto.getValidUntil() != null) coupon.setValidUntil(dto.getValidUntil());
-        if (dto.getIsActive() != null) coupon.setIsActive(dto.getIsActive());
-
-        return mapToDto(couponRepository.save(coupon));
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void deleteCoupon(Long id) throws Exception {
-        Coupon coupon = couponRepository.findById(id).orElseThrow(() -> new Exception("Coupon not found"));
-        couponRepository.delete(coupon);
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public CouponDTO getCouponById(Long id) throws Exception {
         return mapToDto(couponRepository.findById(id).orElseThrow(() -> new Exception("Coupon not found")));
@@ -104,6 +54,18 @@ public class CouponServiceImpl implements CouponService {
     @Override
     @Transactional(readOnly = true)
     public CouponDTO getCouponByCode(String code, Long storeId) throws Exception {
+        if ("POINTS".equalsIgnoreCase(code.trim())) {
+            return CouponDTO.builder()
+                    .id(0L)
+                    .code("POINTS")
+                    .discountType("FLAT")
+                    .discountValue(0.0)
+                    .minOrderValue(0.0)
+                    .isActive(true)
+                    .storeId(storeId)
+                    .build();
+        }
+
         Coupon coupon = couponRepository.findByCodeAndStoreId(code.trim().toUpperCase(), storeId)
                 .orElseThrow(() -> new Exception("Invalid coupon code"));
 
@@ -117,7 +79,82 @@ public class CouponServiceImpl implements CouponService {
         if (Boolean.FALSE.equals(coupon.getIsActive())) {
             throw new Exception("Coupon is disabled");
         }
-
         return mapToDto(coupon);
+    }
+
+
+    /// /////////////////////////////////////////
+
+    private void validateCouponStoreAccess(Store store) throws Exception {
+        User user = userService.getCurrentUser();
+        if (user.getRole() == UserRole.ROLE_ADMIN) return;
+        boolean isOwner = store.getStoreAdmin() != null && store.getStoreAdmin().getId().equals(user.getId());
+        boolean isManager = user.getStore() != null && user.getStore().getId().equals(store.getId())
+                && (user.getRole() == UserRole.ROLE_STORE_ADMIN || user.getRole() == UserRole.ROLE_STORE_MANAGER);
+        if (!isOwner && !isManager) {
+            throw new Exception("You do not have permission to manage coupons for this store");
+        }
+    }
+
+    private void validateCouponValues(String discountType, Double discountValue) throws Exception {
+        if (discountValue == null || discountValue <= 0) {
+            throw new IllegalArgumentException("Discount value must be greater than 0");
+        }
+        if ("PERCENTAGE".equalsIgnoreCase(discountType) && discountValue > 100) {
+            throw new IllegalArgumentException("Percentage discount cannot exceed 100%");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public CouponDTO createCoupon(CouponDTO dto) throws Exception {
+        Store store = storeRepository.findById(dto.getStoreId())
+                .orElseThrow(() -> new Exception("Store not found"));
+        validateCouponStoreAccess(store);
+        validateCouponValues(dto.getDiscountType(), dto.getDiscountValue());
+
+        String normalizedCode = dto.getCode().trim().toUpperCase();
+        if (couponRepository.findByCodeAndStoreId(normalizedCode, store.getId()).isPresent()) {
+            throw new Exception("Coupon code already exists in this store");
+        }
+
+        Coupon coupon = Coupon.builder()
+                .code(normalizedCode)
+                .discountType(dto.getDiscountType())
+                .discountValue(dto.getDiscountValue())
+                .minOrderValue(dto.getMinOrderValue())
+                .validFrom(dto.getValidFrom())
+                .validUntil(dto.getValidUntil())
+                .isActive(dto.getIsActive() != null ? dto.getIsActive() : true)
+                .store(store)
+                .build();
+        return mapToDto(couponRepository.save(coupon));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public CouponDTO updateCoupon(Long id, CouponDTO dto) throws Exception {
+        Coupon coupon = couponRepository.findById(id).orElseThrow(() -> new Exception("Coupon not found"));
+        validateCouponStoreAccess(coupon.getStore());
+
+        if (dto.getCode() != null) coupon.setCode(dto.getCode().trim().toUpperCase());
+        if (dto.getDiscountType() != null) coupon.setDiscountType(dto.getDiscountType());
+        if (dto.getDiscountValue() != null) coupon.setDiscountValue(dto.getDiscountValue());
+        validateCouponValues(coupon.getDiscountType(), coupon.getDiscountValue());
+
+        if (dto.getMinOrderValue() != null) coupon.setMinOrderValue(dto.getMinOrderValue());
+        if (dto.getValidFrom() != null) coupon.setValidFrom(dto.getValidFrom());
+        if (dto.getValidUntil() != null) coupon.setValidUntil(dto.getValidUntil());
+        if (dto.getIsActive() != null) coupon.setIsActive(dto.getIsActive());
+
+        return mapToDto(couponRepository.save(coupon));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteCoupon(Long id) throws Exception {
+        Coupon coupon = couponRepository.findById(id).orElseThrow(() -> new Exception("Coupon not found"));
+        validateCouponStoreAccess(coupon.getStore());
+        couponRepository.delete(coupon);
     }
 }

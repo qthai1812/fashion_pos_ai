@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 import {
   createStore,
   getStoreById,
@@ -9,8 +9,8 @@ import {
   getStoreByEmployee,
   getStoreEmployees,
   addEmployee,
-  moderateStore, // <-- Add this import
-} from './storeThunks';
+  moderateStore,
+} from "./storeThunks";
 
 const initialState = {
   store: null,
@@ -21,7 +21,7 @@ const initialState = {
 };
 
 const storeSlice = createSlice({
-  name: 'store',
+  name: "store",
   initialState,
   reducers: {
     clearStoreState: (state) => {
@@ -43,7 +43,6 @@ const storeSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       .addCase(getStoreById.fulfilled, (state, action) => {
         state.store = action.payload;
       })
@@ -56,11 +55,27 @@ const storeSlice = createSlice({
       .addCase(deleteStore.fulfilled, (state) => {
         state.store = null;
       })
+      .addCase(getStoreByAdmin.pending, (state) => {
+        state.loading = true;
+      })
       .addCase(getStoreByAdmin.fulfilled, (state, action) => {
-        state.store = action.payload;
+        state.loading = false;
+        state.store = action.payload || null;
+      })
+      .addCase(getStoreByAdmin.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(getStoreByEmployee.pending, (state) => {
+        state.loading = true;
       })
       .addCase(getStoreByEmployee.fulfilled, (state, action) => {
-        state.store = action.payload;
+        state.loading = false;
+        state.store = action.payload || null;
+      })
+      .addCase(getStoreByEmployee.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       })
       .addCase(getStoreEmployees.fulfilled, (state, action) => {
         state.employees = action.payload;
@@ -68,20 +83,18 @@ const storeSlice = createSlice({
       .addCase(addEmployee.fulfilled, (state, action) => {
         state.employees.push(action.payload);
       })
-
-      // Update store in list after moderation
       .addCase(moderateStore.fulfilled, (state, action) => {
         const updated = action.payload;
-        state.stores = state.stores.map(store =>
-          store.id === updated.id ? updated : store
+        state.stores = state.stores.map((store) =>
+          store.id === updated.id ? updated : store,
         );
       })
-
       .addMatcher(
-        (action) => action.type.startsWith('store/') && action.type.endsWith('/rejected'),
+        (action) =>
+          action.type.startsWith("store/") && action.type.endsWith("/rejected"),
         (state, action) => {
           state.error = action.payload;
-        }
+        },
       );
   },
 });

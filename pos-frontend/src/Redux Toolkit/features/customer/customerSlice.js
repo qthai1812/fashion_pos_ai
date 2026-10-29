@@ -1,11 +1,12 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 import {
   createCustomer,
   updateCustomer,
   deleteCustomer,
   getCustomerById,
-  getAllCustomers
-} from './customerThunks';
+  getAllCustomers,
+} from "./customerThunks";
+import { createOrder } from "../order/orderThunks";
 
 const initialState = {
   customers: [],
@@ -15,7 +16,7 @@ const initialState = {
 };
 
 const customerSlice = createSlice({
-  name: 'customer',
+  name: "customer",
   initialState,
   reducers: {
     clearCustomerState: (state) => {
@@ -35,7 +36,7 @@ const customerSlice = createSlice({
       })
       .addCase(createCustomer.fulfilled, (state, action) => {
         state.loading = false;
-        state.customers.push(action.payload);
+        state.customers.unshift(action.payload);
       })
       .addCase(createCustomer.rejected, (state, action) => {
         state.loading = false;
@@ -48,11 +49,16 @@ const customerSlice = createSlice({
       })
       .addCase(updateCustomer.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.customers.findIndex(customer => customer.id === action.payload.id);
+        const index = state.customers.findIndex(
+          (customer) => customer.id === action.payload.id,
+        );
         if (index !== -1) {
           state.customers[index] = action.payload;
         }
-        if (state.selectedCustomer && state.selectedCustomer.id === action.payload.id) {
+        if (
+          state.selectedCustomer &&
+          state.selectedCustomer.id === action.payload.id
+        ) {
           state.selectedCustomer = action.payload;
         }
       })
@@ -67,8 +73,13 @@ const customerSlice = createSlice({
       })
       .addCase(deleteCustomer.fulfilled, (state, action) => {
         state.loading = false;
-        state.customers = state.customers.filter(customer => customer.id !== action.payload);
-        if (state.selectedCustomer && state.selectedCustomer.id === action.payload) {
+        state.customers = state.customers.filter(
+          (customer) => customer.id !== action.payload,
+        );
+        if (
+          state.selectedCustomer &&
+          state.selectedCustomer.id === action.payload
+        ) {
           state.selectedCustomer = null;
         }
       })
@@ -103,15 +114,37 @@ const customerSlice = createSlice({
         state.error = action.payload;
       })
 
+      // Tự động đồng bộ loyaltyPoints của khách hàng sau khi tạo Order thành công
+      .addCase(createOrder.fulfilled, (state, action) => {
+        const updatedCustomer = action.payload?.customer;
+        if (updatedCustomer && updatedCustomer.id) {
+          const index = state.customers.findIndex(
+            (c) => c.id === updatedCustomer.id,
+          );
+          if (index !== -1) {
+            state.customers[index] = updatedCustomer;
+          }
+          if (
+            state.selectedCustomer &&
+            state.selectedCustomer.id === updatedCustomer.id
+          ) {
+            state.selectedCustomer = updatedCustomer;
+          }
+        }
+      })
+
       // Generic error handling for all customer actions
       .addMatcher(
-        (action) => action.type.startsWith('customer/') && action.type.endsWith('/rejected'),
+        (action) =>
+          action.type.startsWith("customer/") &&
+          action.type.endsWith("/rejected"),
         (state, action) => {
           state.error = action.payload;
-        }
+        },
       );
   },
 });
 
-export const { clearCustomerState, clearSelectedCustomer } = customerSlice.actions;
-export default customerSlice.reducer; 
+export const { clearCustomerState, clearSelectedCustomer } =
+  customerSlice.actions;
+export default customerSlice.reducer;

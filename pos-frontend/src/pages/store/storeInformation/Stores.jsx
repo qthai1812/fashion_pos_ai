@@ -2,20 +2,23 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/use-toast";
-import { getStoreByAdmin, updateStore } from "@/Redux Toolkit/features/store/storeThunks";
+import {
+  getStoreByAdmin,
+  updateStore,
+} from "@/Redux Toolkit/features/store/storeThunks";
 import {
   StoreHeader,
   StoreInfoCard,
   EditStoreDialog,
   LoadingState,
   EmptyState,
-  getInitialValues
+  getInitialValues,
 } from "./components";
 
 export default function Stores() {
   const dispatch = useDispatch();
   const { store, loading, error } = useSelector((state) => state.store);
-  const { user } = useSelector((state) => state.user);
+  const { userProfile } = useSelector((state) => state.user);
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [storeData, setStoreData] = useState(null);
@@ -25,14 +28,14 @@ export default function Stores() {
     if (store?.id) {
       fetchStoreData();
     }
-  }, [dispatch, user]);
-  
+  }, [dispatch, userProfile]);
+
   useEffect(() => {
     if (store) {
       setStoreData(store);
     }
   }, [store]);
-  
+
   const fetchStoreData = async () => {
     setRefreshing(true);
     try {
@@ -50,11 +53,13 @@ export default function Stores() {
 
   const handleEditStore = async (values, { setSubmitting, resetForm }) => {
     try {
-      await dispatch(updateStore({ 
-        id: storeData.id, 
-        storeData: values
-      })).unwrap();
-      
+      await dispatch(
+        updateStore({
+          id: storeData.id,
+          storeData: values,
+        }),
+      ).unwrap();
+
       setEditDialogOpen(false);
       toast({
         title: "Success",
@@ -79,7 +84,7 @@ export default function Stores() {
 
   return (
     <div className="space-y-6">
-      <StoreHeader 
+      <StoreHeader
         onRefresh={fetchStoreData}
         refreshing={refreshing}
         loading={loading}
@@ -97,10 +102,7 @@ export default function Stores() {
         <EmptyState />
       ) : (
         <div className="grid gap-6">
-          <StoreInfoCard 
-            storeData={storeData}
-            onEditClick={handleEditClick}
-          />
+          <StoreInfoCard storeData={storeData} onEditClick={handleEditClick} />
         </div>
       )}
 

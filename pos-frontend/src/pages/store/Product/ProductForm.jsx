@@ -21,8 +21,7 @@ import { getCategoriesByStore } from "../../../Redux Toolkit/features/category/c
 import { PhoneOutgoing } from "lucide-react";
 import { X } from "lucide-react";
 import { useState } from "react";
-import { uploadToCloudinary } from "../../../utils/uploadToCloudinary";
-
+import { uploadFileToServer } from "../../../utils/uploadFile";
 const validationSchema = Yup.object({
   name: Yup.string().required("Product name is required"),
   sku: Yup.string().required("SKU is required"),
@@ -112,9 +111,11 @@ const ProductForm = ({
   const handleImageChange = async (e, setFieldValue) => {
     const file = e.target.files[0];
     setUploadingImage(true);
-    const image = await uploadToCloudinary(file);
-    setFieldValue("image",image);
-    setUploadingImage(false)
+    const image = await uploadFileToServer(file);
+    if (image) {
+      setFieldValue("image", image);
+    }
+    setUploadingImage(false);
   };
 
   return (

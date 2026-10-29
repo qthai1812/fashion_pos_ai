@@ -7,8 +7,11 @@ import {
 } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { MessageCircle, Mail, Phone, HelpCircle, ChevronRight } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 const FAQSection = () => {
+  const { toast } = useToast();
+
   const faqs = [
     {
       question: "Can I use the POS system offline?",
@@ -16,7 +19,7 @@ const FAQSection = () => {
     },
     {
       question: "Is the system GST-compliant?",
-      answer: "Absolutely! Our system is fully GST-compliant with automatic tax calculations, proper invoice formats, and comprehensive reporting that meets all Indian tax requirements."
+      answer: "Absolutely! Our system is fully GST-compliant with automatic tax calculations, proper invoice formats, and comprehensive reporting that meets all tax requirements."
     },
     {
       question: "What kind of support is available?",
@@ -32,7 +35,7 @@ const FAQSection = () => {
     },
     {
       question: "Can I customize receipts and invoices?",
-      answer: "Yes, you can fully customize your receipts and invoices with your business logo, contact information, terms and conditions, and special offers or promotions. The system also supports multiple languages and currencies."
+      answer: "Yes, you can fully customize your receipts and invoices with your business logo, contact information, terms and conditions, and special offers or promotions."
     },
     {
       question: "Is there a mobile app available?",
@@ -40,12 +43,28 @@ const FAQSection = () => {
     },
     {
       question: "How easy is it to train new staff?",
-      answer: "Our system is designed with user-friendliness in mind. New staff can typically learn the basics within 30 minutes. We also provide comprehensive training materials, video tutorials, and a guided onboarding process."
+      answer: "Our system is designed with user-friendliness in mind. New staff can typically learn the basics within 30 minutes."
     },
   ];
 
+  const handleSupportAction = (type) => {
+    if (type === 'phone') {
+      window.location.href = 'tel:+919876543210';
+    } else if (type === 'email') {
+      window.location.href = 'mailto:support@pospro.com';
+    } else {
+      const contactEl = document.getElementById('contact');
+      if (contactEl) contactEl.scrollIntoView({ behavior: 'smooth' });
+      toast({
+        title: type === 'chat' ? "Connecting to Support" : "Help Center",
+        description: "Please leave your question in the contact form below for immediate assistance.",
+      });
+    }
+  };
+
   const supportOptions = [
     {
+      type: "phone",
       icon: <Phone className="w-5 h-5" />,
       title: "Phone Support",
       description: "Talk to our experts",
@@ -53,6 +72,7 @@ const FAQSection = () => {
       buttonText: "Call Now"
     },
     {
+      type: "email",
       icon: <Mail className="w-5 h-5" />,
       title: "Email Support",
       description: "Get answers by email",
@@ -60,6 +80,7 @@ const FAQSection = () => {
       buttonText: "Send Email"
     },
     {
+      type: "chat",
       icon: <MessageCircle className="w-5 h-5" />,
       title: "Live Chat",
       description: "Chat with our team",
@@ -67,6 +88,7 @@ const FAQSection = () => {
       buttonText: "Start Chat"
     },
     {
+      type: "help",
       icon: <HelpCircle className="w-5 h-5" />,
       title: "Help Center",
       description: "Browse our resources",
@@ -76,7 +98,7 @@ const FAQSection = () => {
   ];
 
   return (
-    <section className="py-16 bg-white">
+    <section id="faq" className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -89,7 +111,6 @@ const FAQSection = () => {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Left Side - FAQs */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <Accordion type="single" collapsible className="w-full">
@@ -108,14 +129,17 @@ const FAQSection = () => {
             
             <div className="mt-8 text-center">
               <p className="text-gray-600 mb-4">Still have questions?</p>
-              <Button variant="outline" className="group">
+              <Button
+                variant="outline"
+                className="group"
+                onClick={() => handleSupportAction('chat')}
+              >
                 Contact Our Support Team
                 <ChevronRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </div>
           </div>
           
-          {/* Right Side - Support Options */}
           <div className="lg:sticky lg:top-24">
             <div className="bg-gray-50 rounded-xl p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-6">Support Options</h3>
@@ -131,31 +155,18 @@ const FAQSection = () => {
                         <h4 className="font-medium text-gray-900">{option.title}</h4>
                         <p className="text-sm text-gray-500 mb-1">{option.description}</p>
                         <p className="text-sm font-medium text-gray-900 mb-3">{option.action}</p>
-                        <Button variant="outline" size="sm" className="w-full justify-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-center"
+                          onClick={() => handleSupportAction(option.type)}
+                        >
                           {option.buttonText}
                         </Button>
                       </div>
                     </div>
                   </div>
                 ))}
-              </div>
-              
-              <div className="mt-6 bg-primary/5 rounded-lg p-4 border border-primary/10">
-                <h4 className="font-medium text-gray-900 mb-2">Business Hours</h4>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Monday - Friday:</span>
-                    <span className="font-medium">9:00 AM - 8:00 PM</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Saturday:</span>
-                    <span className="font-medium">10:00 AM - 6:00 PM</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Sunday:</span>
-                    <span className="font-medium">Closed</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

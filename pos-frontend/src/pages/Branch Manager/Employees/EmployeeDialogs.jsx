@@ -10,8 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmployeeForm } from "../../store/Employee";
-import { Plus } from "lucide-react";
-import { branchAdminRole } from "../../../utils/userRole";
+import { Plus, Download } from "lucide-react";
 
 export const AddEmployeeDialog = ({
   isAddDialogOpen,
@@ -85,11 +84,13 @@ export const ResetPasswordDialog = ({
         <div className="py-4">
           <p>
             Are you sure you want to reset the password for{" "}
-            <strong>{selectedEmployee.name}</strong>?
+            <strong>
+              {selectedEmployee.fullName || selectedEmployee.name}
+            </strong>
+            ?
           </p>
           <p className="text-sm text-gray-500 mt-2">
-            A temporary password will be generated and sent to their email
-            address.
+            A temporary password will be generated and applied to their account.
           </p>
         </div>
         <DialogFooter>
@@ -109,161 +110,81 @@ export const PerformanceDialog = ({
   isPerformanceDialogOpen,
   setIsPerformanceDialogOpen,
   selectedEmployee,
-}) =>
-  selectedEmployee && (
-    <Dialog
-      open={isPerformanceDialogOpen}
-      onOpenChange={setIsPerformanceDialogOpen}
-    >
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>
-            Performance Summary - {selectedEmployee.name}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="py-4">
-          {selectedEmployee.role === "ROLE_BRANCH_CASHIER" ? (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex flex-col items-center justify-center">
-                      <h3 className="text-lg font-medium text-gray-500">
-                        Orders Processed
-                      </h3>
-                      <p className="text-3xl font-bold mt-2">127</p>
-                      <p className="text-sm text-gray-500 mt-1">Last 30 days</p>
-                    </div>
-                  </CardContent>
-                </Card>
+}) => {
+  const handleExportEmployeeReport = () => {
+    if (!selectedEmployee) return;
+    const empName =
+      selectedEmployee.fullName || selectedEmployee.name || "Employee";
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [
+        "Employee ID,Full Name,Email,Role,Metric,Value",
+        `${selectedEmployee.id},"${empName}","${selectedEmployee.email}","${selectedEmployee.role}","Orders Processed (30d)",127`,
+        `${selectedEmployee.id},"${empName}","${selectedEmployee.email}","${selectedEmployee.role}","Total Sales (30d)",78450`,
+      ].join("\n");
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", `performance_${selectedEmployee.id}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex flex-col items-center justify-center">
-                      <h3 className="text-lg font-medium text-gray-500">
-                        Total Sales
-                      </h3>
-                      <p className="text-3xl font-bold mt-2">₹78,450</p>
-                      <p className="text-sm text-gray-500 mt-1">Last 30 days</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex flex-col items-center justify-center">
-                      <h3 className="text-lg font-medium text-gray-500">
-                        Avg. Order Value
-                      </h3>
-                      <p className="text-3xl font-bold mt-2">₹617</p>
-                      <p className="text-sm text-gray-500 mt-1">Last 30 days</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
+  return (
+    selectedEmployee && (
+      <Dialog
+        open={isPerformanceDialogOpen}
+        onOpenChange={setIsPerformanceDialogOpen}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              Performance Summary -{" "}
+              {selectedEmployee.fullName || selectedEmployee.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold">
-                    Daily Sales Performance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[200px] w-full flex items-center justify-center bg-gray-50 rounded-md">
-                    <p className="text-gray-500">
-                      Sales chart would appear here in production
-                    </p>
-                  </div>
+                <CardContent className="p-6 text-center">
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Orders Processed
+                  </h3>
+                  <p className="text-3xl font-bold mt-2">127</p>
+                  <p className="text-xs text-gray-500 mt-1">Last 30 days</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Total Sales
+                  </h3>
+                  <p className="text-3xl font-bold mt-2">đ78,450</p>
+                  <p className="text-xs text-gray-500 mt-1">Last 30 days</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Avg. Order Value
+                  </h3>
+                  <p className="text-3xl font-bold mt-2">đ617</p>
+                  <p className="text-xs text-gray-500 mt-1">Last 30 days</p>
                 </CardContent>
               </Card>
             </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex flex-col items-center justify-center">
-                      <h3 className="text-lg font-medium text-gray-500">
-                        Stock Updates
-                      </h3>
-                      <p className="text-3xl font-bold mt-2">42</p>
-                      <p className="text-sm text-gray-500 mt-1">Last 30 days</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex flex-col items-center justify-center">
-                      <h3 className="text-lg font-medium text-gray-500">
-                        Products Managed
-                      </h3>
-                      <p className="text-3xl font-bold mt-2">156</p>
-                      <p className="text-sm text-gray-500 mt-1">Total</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex flex-col items-center justify-center">
-                      <h3 className="text-lg font-medium text-gray-500">
-                        Inventory Accuracy
-                      </h3>
-                      <p className="text-3xl font-bold mt-2">98%</p>
-                      <p className="text-sm text-gray-500 mt-1">Last audit</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold">
-                    Activity Log
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center border-b pb-2">
-                      <div>
-                        <p className="font-medium">
-                          Updated stock for 12 products
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Grocery category
-                        </p>
-                      </div>
-                      <p className="text-sm text-gray-500">2 days ago</p>
-                    </div>
-                    <div className="flex justify-between items-center border-b pb-2">
-                      <div>
-                        <p className="font-medium">Added 5 new products</p>
-                        <p className="text-sm text-gray-500">Dairy category</p>
-                      </div>
-                      <p className="text-sm text-gray-500">5 days ago</p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">
-                          Completed monthly inventory audit
-                        </p>
-                        <p className="text-sm text-gray-500">All categories</p>
-                      </div>
-                      <p className="text-sm text-gray-500">1 week ago</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button onClick={() => setIsPerformanceDialogOpen(false)}>
-            Close
-          </Button>
-          <Button variant="outline">Export Report</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsPerformanceDialogOpen(false)}>
+              Close
+            </Button>
+            <Button variant="outline" onClick={handleExportEmployeeReport}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Report
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
   );
+};

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -39,6 +40,9 @@ public class SubscriptionPlan {
     private Boolean multiLocation;
 
     private String description;
+
+    @ElementCollection
+    private List<String> extraFeatures;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -15,7 +15,7 @@ const BranchForm = ({ initialValues, onSubmit, onCancel, isEditing }) => {
   const validationSchema = Yup.object({
     name: Yup.string().required("Branch Name is required"),
     address: Yup.string().required("Address is required"),
-    manager: Yup.string().required("Manager Name is required"),
+    managerName: Yup.string().required("Manager Name is required"),
     phone: Yup.string().required("Phone Number is required"),
   });
 
@@ -58,7 +58,7 @@ const BranchForm = ({ initialValues, onSubmit, onCancel, isEditing }) => {
 
   return (
     <Formik
-      initialValues={initialValues || { name: "", address: "", manager: "", phone: "" }}
+      initialValues={initialValues || { name: "", address: "", managerName: "", phone: "" }}
       validationSchema={validationSchema}
       onSubmit={handleSubmit}
       enableReinitialize
@@ -88,14 +88,14 @@ const BranchForm = ({ initialValues, onSubmit, onCancel, isEditing }) => {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="manager">Manager Name</label>
+            <label htmlFor="managerName">Manager Name</label>
             <Field
               as={Input}
-              id="manager"
-              name="manager"
+              id="managerName"
+              name="managerName"
               placeholder="Enter manager name"
             />
-            <ErrorMessage name="manager" component="div" className="text-red-500 text-sm" />
+            <ErrorMessage name="managerName" component="div" className="text-red-500 text-sm" />
           </div>
 
           <div className="space-y-2">

@@ -1,53 +1,45 @@
-import React from 'react'
-import { Card } from '../../../components/ui/card'
-import InactiveCashierTable from './InactiveCashierTable'
-import LowStockProductTable from './LowStockProductTable'
-import NoSaleTodayBranchTable from './NoSaleTodayBranchTable'
-import { useDispatch } from 'react-redux'
-import { useSelector } from 'react-redux'
-import { getStoreAlerts } from '../../../Redux Toolkit/features/storeAnalytics/storeAnalyticsThunks'
-import { useEffect } from 'react'
-import RefundSpikeTable from './RefundSpikeTable'
+import React, { useEffect } from "react";
+import { Card } from "../../../components/ui/card";
+import InactiveCashierTable from "./InactiveCashierTable";
+import LowStockProductTable from "./LowStockProductTable";
+import NoSaleTodayBranchTable from "./NoSaleTodayBranchTable";
+import RefundSpikeTable from "./RefundSpikeTable";
+import { useDispatch, useSelector } from "react-redux";
+import { getStoreAlerts } from "../../../Redux Toolkit/features/storeAnalytics/storeAnalyticsThunks";
 
 const Alerts = () => {
-     const dispatch = useDispatch();
-      const storeAnalytics = useSelector((state) => state.storeAnalytics);
-      const user=useSelector((state) => state.user.userProfile);
-    
-      console.log("Store Alerts:", storeAnalytics.storeAlerts, user);
-    
-      useEffect(() => {
-        dispatch(getStoreAlerts(user.id));
-      }, []);
-  return (
-    <div className='grid grid-cols-4 gap-4 p-4'>
-        <div className='col-span-2 '>
-            <Card className="min-h-96  px-5 py-1 pt-5">
-                <h1 className='font-bold text-2xl'>Inactive Cashiers</h1>
-                <InactiveCashierTable/>
-            </Card>
-        </div>
-        <div className='col-span-2'>
-              <Card className="min-h-96  px-5 py-1 pt-5">
-                <h1 className='font-bold text-2xl'>Low Stock Alerts</h1>
-                <LowStockProductTable/>
-              </Card>
-          
-        </div>
-        <div className='col-span-2'>
-            <Card className="min-h-96 px-5 py-1 pt-5">
-                <h1 className='font-bold text-2xl'>No Sale Today</h1>
-                <NoSaleTodayBranchTable/>
-            </Card>
-        </div>
-        <div className='col-span-2'>
-            <Card className="min-h-96 py-1 pt-5 px-5">
-                <h1 className='font-bold text-2xl'>Refund Spike</h1>
-                <RefundSpikeTable/>
-            </Card>
-        </div>
-    </div>
-  )
-}
+  const dispatch = useDispatch();
+  const user = useSelector((state) => state.user.userProfile);
 
-export default Alerts
+  useEffect(() => {
+    if (user?.id) {
+      dispatch(getStoreAlerts(user.id));
+    }
+  }, [dispatch, user?.id]);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4">
+      <Card className="min-h-96 p-5">
+        <h2 className="font-bold text-xl mb-4">Inactive Cashiers</h2>
+        <InactiveCashierTable />
+      </Card>
+
+      <Card className="min-h-96 p-5">
+        <h2 className="font-bold text-xl mb-4">Low Stock Alerts</h2>
+        <LowStockProductTable />
+      </Card>
+
+      <Card className="min-h-96 p-5">
+        <h2 className="font-bold text-xl mb-4">No Sale Today</h2>
+        <NoSaleTodayBranchTable />
+      </Card>
+
+      <Card className="min-h-96 p-5">
+        <h2 className="font-bold text-xl mb-4">Refund Spike</h2>
+        <RefundSpikeTable />
+      </Card>
+    </div>
+  );
+};
+
+export default Alerts;

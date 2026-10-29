@@ -20,7 +20,7 @@ import ProductDetails from "./ProductDetails";
 export default function Products() {
   const dispatch = useDispatch();
   const { products, loading, error, searchResults } = useSelector(
-    (state) => state.product
+    (state) => state.product,
   );
   const { store } = useSelector((state) => state.store);
 
@@ -42,7 +42,7 @@ export default function Products() {
   // Update displayed products when products or search results change
   useEffect(() => {
     setDisplayedProducts(
-      isSearchActive && searchResults.length > 0 ? searchResults : products
+      isSearchActive && searchResults.length > 0 ? searchResults : products,
     );
   }, [products, searchResults, isSearchActive]);
 

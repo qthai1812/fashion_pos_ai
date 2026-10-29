@@ -1,14 +1,25 @@
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { formatDate } from '../../order/data';
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { formatDate } from "../../order/data";
 
 const OrderDetailsSection = ({ selectedOrder, setSelectedOrder }) => (
   <div className="w-1/2 border-r p-4 flex flex-col">
     <div className="mb-4">
-      <Button variant="outline" size="sm" onClick={() => setSelectedOrder(null)}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setSelectedOrder(null)}
+      >
         ← Back to Order Search
       </Button>
     </div>
@@ -17,27 +28,36 @@ const OrderDetailsSection = ({ selectedOrder, setSelectedOrder }) => (
         <div className="flex justify-between items-start mb-4">
           <div>
             <h2 className="font-semibold text-lg">Order {selectedOrder.id}</h2>
-            <p className="text-sm text-muted-foreground">{formatDate(selectedOrder.createdAt)}</p>
+            <p className="text-sm text-muted-foreground">
+              {formatDate(selectedOrder.createdAt)}
+            </p>
           </div>
-          <Badge variant="outline">
-            {(selectedOrder.paymentType)}
-          </Badge>
+          <Badge variant="outline">{selectedOrder.paymentType}</Badge>
         </div>
         <div className="mb-4">
-          <h3 className="font-medium text-sm text-muted-foreground mb-2">Customer</h3>
+          <h3 className="font-medium text-sm text-muted-foreground mb-2">
+            Customer
+          </h3>
           <p>{selectedOrder?.customer?.fullName}</p>
           <p className="text-sm">{selectedOrder.customer?.phone}</p>
         </div>
         <div>
-          <h3 className="font-medium text-sm text-muted-foreground mb-2">Order Summary</h3>
+          <h3 className="font-medium text-sm text-muted-foreground mb-2">
+            Order Summary
+          </h3>
           <div className="text-sm">
             <div className="flex justify-between">
               <span>Total Items:</span>
-              <span>{selectedOrder.items.reduce((sum, item) => sum + item.quantity, 0)}</span>
+              <span>
+                {selectedOrder.items.reduce(
+                  (sum, item) => sum + item.quantity,
+                  0,
+                )}
+              </span>
             </div>
             <div className="flex justify-between font-medium">
               <span>Order Total:</span>
-              <span>₹{selectedOrder.totalAmount?.toFixed(2)}</span>
+              <span>đ{selectedOrder.totalAmount?.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -55,12 +75,16 @@ const OrderDetailsSection = ({ selectedOrder, setSelectedOrder }) => (
           </TableRow>
         </TableHeader>
         <TableBody>
-          {selectedOrder.items.map(item => (
+          {selectedOrder.items.map((item) => (
             <TableRow key={item.id}>
               <TableCell>{item.product?.name}</TableCell>
               <TableCell className="text-center">{item.quantity}</TableCell>
-              <TableCell className="text-right">₹{(item.product?.sellingPrice)?.toFixed(2)}</TableCell>
-              <TableCell className="text-right">₹{(item.product?.sellingPrice * item.quantity).toFixed(2)}</TableCell>
+              <TableCell className="text-right">
+                đ{item.product?.sellingPrice?.toFixed(2)}
+              </TableCell>
+              <TableCell className="text-right">
+                đ{(item.product?.sellingPrice * item.quantity).toFixed(2)}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -69,4 +93,4 @@ const OrderDetailsSection = ({ selectedOrder, setSelectedOrder }) => (
   </div>
 );
 
-export default OrderDetailsSection; 
+export default OrderDetailsSection;

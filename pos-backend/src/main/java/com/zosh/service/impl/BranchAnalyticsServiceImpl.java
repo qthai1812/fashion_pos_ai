@@ -1,10 +1,14 @@
 package com.zosh.service.impl;
 
+import com.zosh.domain.OrderStatus;
 import com.zosh.modal.Order;
 import com.zosh.modal.OrderItem;
+import com.zosh.modal.Refund;
+import com.zosh.modal.ShiftReport;
 import com.zosh.payload.response.*;
 import com.zosh.repository.InventoryRepository;
 import com.zosh.repository.OrderRepository;
+import com.zosh.repository.RefundRepository;
 import com.zosh.repository.ShiftReportRepository;
 import com.zosh.service.BranchAnalyticsService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +28,7 @@ public class BranchAnalyticsServiceImpl implements BranchAnalyticsService {
     private final OrderRepository orderRepository;
     private final InventoryRepository inventoryRepository;
     private final ShiftReportRepository shiftReportRepository;
+    private final RefundRepository refundRepository;
 
     @Override
     public List<DailySalesDTO> getDailySalesChart(Long branchId, int days) {
@@ -32,8 +37,11 @@ public class BranchAnalyticsServiceImpl implements BranchAnalyticsService {
         LocalDateTime rangeStart = startDate.atStartOfDay();
         LocalDateTime rangeEnd = today.plusDays(1).atStartOfDay();
 
-        // Truy vấn 1 lần duy nhất cho toàn bộ khoảng ngày (loại bỏ vòng lặp N queries)
-        List<Order> ordersInRange = orderRepository.findByBranchIdAndCreatedAtBetween(branchId, rangeStart, rangeEnd);
+        List<Order> ordersInRange = orderRepository.findByBranchIdAndCreatedAtBetween(branchId, rangeStart, rangeEnd)
+                .stream()
+                .filter(o -> o.getStatus() != OrderStatus.REFUNDED)
+                .collect(Collectors.toList());
+
         Map<LocalDate, List<Order>> ordersByDate = ordersInRange.stream()
                 .filter(o -> o.getCreatedAt() != null)
                 .collect(Collectors.groupingBy(o -> o.getCreatedAt().toLocalDate()));
@@ -52,7 +60,9 @@ public class BranchAnalyticsServiceImpl implements BranchAnalyticsService {
 
     @Override
     public List<TopProductDTO> getTopProductsByQuantity(Long branchId) {
-        List<Order> allOrders = orderRepository.findByBranchId(branchId);
+        List<Order> allOrders = orderRepository.findByBranchId(branchId).stream()
+                .filter(o -> o.getStatus() != OrderStatus.REFUNDED)
+                .collect(Collectors.toList());
         Map<Long, long[]> productStats = new HashMap<>();
         Map<Long, String[]> productMeta = new HashMap<>();
 
@@ -69,6 +79,7 @@ public class BranchAnalyticsServiceImpl implements BranchAnalyticsService {
         }
 
         long totalQty = productStats.values().stream().mapToLong(v -> v[0]).sum();
+
         return productStats.entrySet().stream()
                 .sorted((a, b) -> Long.compare(b.getValue()[0], a.getValue()[0]))
                 .limit(5)
@@ -85,7 +96,9 @@ public class BranchAnalyticsServiceImpl implements BranchAnalyticsService {
 
     @Override
     public List<TopCashierDTO> getTopCashiersByRevenue(Long branchId) {
-        List<Order> allOrders = orderRepository.findByBranchId(branchId);
+        List<Order> allOrders = orderRepository.findByBranchId(branchId).stream()
+                .filter(o -> o.getStatus() != OrderStatus.REFUNDED)
+                .collect(Collectors.toList());
         Map<Long, double[]> cashierStats = new HashMap<>();
         Map<Long, String> cashierNames = new HashMap<>();
 
@@ -110,7 +123,9 @@ public class BranchAnalyticsServiceImpl implements BranchAnalyticsService {
     public List<CategorySalesDTO> getCategoryWiseSalesBreakdown(Long branchId, LocalDate date) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
-        List<Order> orders = orderRepository.findByBranchIdAndCreatedAtBetween(branchId, start, end);
+        List<Order> orders = orderRepository.findByBranchIdAndCreatedAtBetween(branchId, start, end).stream()
+                .filter(o -> o.getStatus() != OrderStatus.REFUNDED)
+                .collect(Collectors.toList());
 
         Map<String, double[]> categoryStats = new HashMap<>();
         for (Order order : orders) {
@@ -125,6 +140,7 @@ public class BranchAnalyticsServiceImpl implements BranchAnalyticsService {
         }
 
         double totalRevenue = categoryStats.values().stream().mapToDouble(v -> v[1]).sum();
+
         return categoryStats.entrySet().stream()
                 .sorted((a, b) -> Double.compare(b.getValue()[1], a.getValue()[1]))
                 .map(e -> {
@@ -140,20 +156,45 @@ public class BranchAnalyticsServiceImpl implements BranchAnalyticsService {
         LocalDate today = LocalDate.now();
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = today.plusDays(1).atStartOfDay();
-        List<Order> todayOrders = orderRepository.findByBranchIdAndCreatedAtBetween(branchId, start, end);
+
+        List<Order> todayOrders = orderRepository.findByBranchIdAndCreatedAtBetween(branchId, start, end).stream()
+                .filter(o -> o.getStatus() != OrderStatus.REFUNDED)
+                .collect(Collectors.toList());
         double todayRevenue = todayOrders.stream().mapToDouble(o -> o.getTotalAmount() != null ? o.getTotalAmount() : 0).sum();
         double avgOrderValue = todayOrders.isEmpty() ? 0 : todayRevenue / todayOrders.size();
+
+        List<Refund> todayRefundsList = refundRepository.findByBranchId(branchId);
+        double todayRefunds = todayRefundsList.stream()
+                .filter(r -> r.getCreatedAt() != null && !r.getCreatedAt().isBefore(start) && r.getCreatedAt().isBefore(end))
+                .mapToDouble(r -> r.getAmount() != null ? r.getAmount() : 0.0)
+                .sum();
+
+        List<ShiftReport> branchShifts = shiftReportRepository.findByBranchId(branchId);
+        long activeShifts = branchShifts.stream()
+                .filter(s -> s.getShiftEnd() == null && s.getShiftStart() != null && !s.getShiftStart().isBefore(start))
+                .count();
+
         long lowStock = inventoryRepository.findByBranchId(branchId).stream()
                 .filter(inv -> inv.getMinStockLevel() != null && inv.getQuantity() <= inv.getMinStockLevel()).count();
-        return new BranchOverviewDTO(todayRevenue, todayOrders.size(), 0.0, 0, (int) lowStock,
-                Math.round(avgOrderValue * 100) / 100.0);
+
+        return new BranchOverviewDTO(
+                todayRevenue,
+                todayOrders.size(),
+                todayRefunds,
+                (int) activeShifts,
+                (int) lowStock,
+                Math.round(avgOrderValue * 100) / 100.0
+        );
     }
 
     @Override
     public List<PaymentBreakdownDTO> getPaymentBreakdown(Long branchId, LocalDate date) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
-        List<Order> orders = orderRepository.findByBranchIdAndCreatedAtBetween(branchId, start, end);
+        List<Order> orders = orderRepository.findByBranchIdAndCreatedAtBetween(branchId, start, end).stream()
+                .filter(o -> o.getStatus() != OrderStatus.REFUNDED)
+                .collect(Collectors.toList());
+
         Map<String, double[]> paymentStats = new HashMap<>();
         for (Order order : orders) {
             if (order.getPaymentType() == null) continue;
@@ -162,7 +203,9 @@ public class BranchAnalyticsServiceImpl implements BranchAnalyticsService {
             paymentStats.get(pt)[0]++;
             paymentStats.get(pt)[1] += order.getTotalAmount() != null ? order.getTotalAmount() : 0;
         }
+
         double totalAmount = paymentStats.values().stream().mapToDouble(v -> v[1]).sum();
+
         return paymentStats.entrySet().stream()
                 .map(e -> {
                     double pct = totalAmount == 0 ? 0 : (e.getValue()[1] * 100.0 / totalAmount);

@@ -64,7 +64,6 @@ const NotificationSettingsForm = ({ notifications, onToggle }) => {
               checked={notifications[item.id]}
               onToggle={() => onToggle(item.id)}
             />
-            {index === notificationItems.length - 2 && <Separator />}
           </React.Fragment>
         ))}
       </CardContent>
@@ -72,4 +71,4 @@ const NotificationSettingsForm = ({ notifications, onToggle }) => {
   );
 };
 
-export default NotificationSettingsForm; 
+export default NotificationSettingsForm;

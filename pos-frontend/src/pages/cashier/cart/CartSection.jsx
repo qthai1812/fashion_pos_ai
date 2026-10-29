@@ -1,9 +1,8 @@
-
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Pause, Trash2 } from "lucide-react";
 import CartItem from "./CartItem";
 import CartSummary from "./CartSummary";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import {
   clearCart,
   removeFromCart,
@@ -11,19 +10,30 @@ import {
   selectHeldOrders,
   updateCartItemQuantity,
 } from "../../../Redux Toolkit/features/cart/cartSlice";
-import { useDispatch } from "react-redux";
 import { useToast } from "../../../components/ui/use-toast";
 
-const CartSection = ({setShowHeldOrdersDialog}) => {
-  // Global cart state
+const CartSection = ({ setShowHeldOrdersDialog }) => {
   const cartItems = useSelector(selectCartItems);
-
-  console.log("Cart items:", cartItems);
   const heldOrders = useSelector(selectHeldOrders);
+  const { inventories = [] } = useSelector((state) => state.inventory || {});
   const dispatch = useDispatch();
-  const toast = useToast();
+  const { toast } = useToast();
 
   const handleUpdateCartItemQuantity = (id, newQuantity) => {
+    if (newQuantity > 0) {
+      const inv = (inventories || []).find(
+        (i) => (i.productId ?? i.product?.id) === id,
+      );
+      const maxAvailable = inv ? Number(inv.quantity ?? 0) : 0;
+      if (maxAvailable > 0 && newQuantity > maxAvailable) {
+        toast({
+          title: "Vượt quá tồn kho",
+          description: `Chi nhánh hiện chỉ còn tối đa ${maxAvailable} sản phẩm này trong kho.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     dispatch(updateCartItemQuantity({ id, quantity: newQuantity }));
   };
 
@@ -40,7 +50,7 @@ const CartSection = ({setShowHeldOrdersDialog}) => {
   };
 
   return (
-    <div className="w-2/5 flex flex-col bg-card border-r">
+    <div className="w-full flex flex-col bg-card border-r h-full">
       <div className="p-4 border-b bg-muted">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold flex items-center">
@@ -56,7 +66,12 @@ const CartSection = ({setShowHeldOrdersDialog}) => {
               <Pause className="w-4 h-4 mr-1" />
               Held ({heldOrders.length})
             </Button>
-            <Button variant="outline" size="sm" onClick={handleClearCart}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearCart}
+              disabled={cartItems.length === 0}
+            >
               <Trash2 className="w-4 h-4 mr-1" />
               Clear
             </Button>
@@ -64,7 +79,6 @@ const CartSection = ({setShowHeldOrdersDialog}) => {
         </div>
       </div>
 
-      {/* Cart Items */}
       <div className="flex-1 overflow-y-auto">
         {cartItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -86,7 +100,6 @@ const CartSection = ({setShowHeldOrdersDialog}) => {
         )}
       </div>
 
-      {/* Cart Summary */}
       {cartItems.length > 0 && <CartSummary />}
     </div>
   );

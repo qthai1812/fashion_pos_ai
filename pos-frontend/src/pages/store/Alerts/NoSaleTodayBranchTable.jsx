@@ -55,26 +55,28 @@ const NoSaleTodayBranchTable = () => {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {storeAlerts?.noSalesToday?.map((branch) => (
-          <TableRow key={branch.id}>
-            <TableCell>
-             {branch.id}
-            </TableCell>
-            <TableCell>
-              
+        {storeAlerts?.noSaleToday?.length > 0 ? (
+          storeAlerts.noSaleToday.map((branch) => (
+            <TableRow key={branch.id}>
+              <TableCell>{branch.id}</TableCell>
+              <TableCell>
                 <div className="font-medium">{branch.name}</div>
-                
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1">
+                  <LocationEdit className="h-4 w-4 text-gray-400" />
+                  {branch.address}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+              No branches found with zero sales today.
             </TableCell>
-            <TableCell>
-              <div className="flex items-center gap-1">
-                <LocationEdit className="h-4 w-4 text-gray-400" />
-                {branch.address}
-              </div>
-            </TableCell>
-         
-         
           </TableRow>
-        ))}
+        )}
       </TableBody>
     </Table>
   );

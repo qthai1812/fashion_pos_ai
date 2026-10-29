@@ -3,14 +3,11 @@ import { useDispatch, useSelector } from "react-redux";
 import { useToast } from "@/components/ui/use-toast";
 import {
   getAllCustomers,
-  
+  updateCustomer,
 } from "@/Redux Toolkit/features/customer/customerThunks";
-import {
-  getOrdersByCustomer,
-} from "@/Redux Toolkit/features/order/orderThunks";
+import { getOrdersByCustomer } from "@/Redux Toolkit/features/order/orderThunks";
 import {
   filterCustomers,
- 
   validatePoints,
   calculateCustomerStats,
 } from "./utils/customerUtils";
@@ -20,16 +17,18 @@ import {
   CustomerDetails,
   PurchaseHistory,
   AddPointsDialog,
- 
 } from "./components";
 import { clearCustomerOrders } from "../../../Redux Toolkit/features/order/orderSlice";
+import {
+  selectSelectedCustomer,
+  setSelectedCustomer as setCartSelectedCustomer,
+} from "../../../Redux Toolkit/features/cart/cartSlice";
 import CustomerForm from "./CustomerForm";
 
 const CustomerLookupPage = () => {
   const dispatch = useDispatch();
   const { toast } = useToast();
 
-  // Redux state
   const {
     customers,
     loading: customerLoading,
@@ -40,22 +39,18 @@ const CustomerLookupPage = () => {
     loading: orderLoading,
     error: orderError,
   } = useSelector((state) => state.order);
-  // const { userProfile } = useSelector((state) => state.user);
+  const cartCustomer = useSelector(selectSelectedCustomer);
 
-  // Local state
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showAddPointsDialog, setShowAddPointsDialog] = useState(false);
   const [pointsToAdd, setPointsToAdd] = useState(0);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
-  
 
-  // Load customers on component mount
   useEffect(() => {
     dispatch(getAllCustomers());
   }, [dispatch]);
 
-  // Handle errors
   useEffect(() => {
     if (customerError) {
       toast({
@@ -76,20 +71,17 @@ const CustomerLookupPage = () => {
     }
   }, [orderError, toast]);
 
-  // Filter customers based on search term
   const filteredCustomers = filterCustomers(customers, searchTerm);
 
-  const handleSelectCustomer = async (customer) => {
+  const handleSelectCustomer = (customer) => {
     setSelectedCustomer(customer);
-    // Clear previous customer orders
     dispatch(clearCustomerOrders());
-    // Fetch customer orders
-    if (customer.id) {
+    if (customer?.id) {
       dispatch(getOrdersByCustomer(customer.id));
     }
   };
 
-  const handleAddPoints = () => {
+  const handleAddPoints = async () => {
     const error = validatePoints(pointsToAdd);
     if (error) {
       toast({
@@ -100,31 +92,47 @@ const CustomerLookupPage = () => {
       return;
     }
 
-    // In a real app, this would update the customer's loyalty points in the database
-    toast({
-      title: "Points Added",
-      description: `${pointsToAdd} points added to ${
-        selectedCustomer.fullName || selectedCustomer.name
-      }'s account`,
-    });
+    try {
+      const currentPts = Number(selectedCustomer?.loyaltyPoints || 0);
+      const newPoints = currentPts + Number(pointsToAdd);
 
-    setShowAddPointsDialog(false);
-    setPointsToAdd(0);
+      const updated = await dispatch(
+        updateCustomer({
+          id: selectedCustomer.id,
+          customer: {
+            ...selectedCustomer,
+            loyaltyPoints: newPoints,
+          },
+        }),
+      ).unwrap();
+
+      setSelectedCustomer(updated);
+      // Đồng bộ luôn với giỏ hàng nếu khách hàng này đang được chọn trong POS
+      if (cartCustomer && cartCustomer.id === updated.id) {
+        dispatch(setCartSelectedCustomer(updated));
+      }
+
+      toast({
+        title: "Points Added",
+        description: `Đã cộng +${pointsToAdd} điểm cho ${
+          updated.fullName || updated.name
+        } (Tổng: ${updated.loyaltyPoints ?? newPoints} điểm)`,
+      });
+      setShowAddPointsDialog(false);
+      setPointsToAdd(0);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err || "Failed to update customer points",
+        variant: "destructive",
+      });
+    }
   };
 
-
-  useEffect(() => {
-    if (selectedCustomer) {
-      dispatch(getOrdersByCustomer(selectedCustomer.id));
-    }
-  }, [selectedCustomer]);
-
-  // Calculate customer stats from orders
   const customerStats = selectedCustomer
     ? calculateCustomerStats(customerOrders)
     : null;
 
-  // Format customer data for display
   const displayCustomer = selectedCustomer
     ? {
         ...selectedCustomer,
@@ -139,14 +147,12 @@ const CustomerLookupPage = () => {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Column - Customer Search & List */}
-        <div className="w-1/3 border-r flex flex-col ">
+        <div className="w-1/3 border-r flex flex-col">
           <CustomerSearch
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             onAddCustomer={() => setShowCustomerForm(true)}
           />
-
           <CustomerList
             customers={filteredCustomers}
             selectedCustomer={selectedCustomer}
@@ -155,38 +161,35 @@ const CustomerLookupPage = () => {
           />
         </div>
 
-        {/* Right Column - Customer Details */}
         <div className="w-2/3 flex flex-col overflow-y-auto">
           <CustomerDetails
             customer={displayCustomer}
             onAddPoints={() => setShowAddPointsDialog(true)}
             loading={orderLoading}
           />
-
           {selectedCustomer && (
             <PurchaseHistory orders={customerOrders} loading={orderLoading} />
           )}
         </div>
       </div>
 
-      {/* Add Points Dialog */}
       <AddPointsDialog
         isOpen={showAddPointsDialog}
-        onClose={() => setShowAddPointsDialog(false)}
+        onClose={() => {
+          setShowAddPointsDialog(false);
+          setPointsToAdd(0);
+        }}
         customer={selectedCustomer}
         pointsToAdd={pointsToAdd}
         onPointsChange={setPointsToAdd}
         onAddPoints={handleAddPoints}
       />
 
-      {/* Add Customer Dialog */}
-        <CustomerForm 
-          showCustomerForm={showCustomerForm}
-          setShowCustomerForm={setShowCustomerForm}
-          // onCustomerCreated={handleCustomerCreat}
-        />
-
-    
+      <CustomerForm
+        showCustomerForm={showCustomerForm}
+        setShowCustomerForm={setShowCustomerForm}
+        onCustomerCreated={handleSelectCustomer}
+      />
     </div>
   );
 };

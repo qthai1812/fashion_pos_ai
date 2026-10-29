@@ -1,12 +1,13 @@
 import React, { useState } from "react";
+import { useDispatch } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Download, Filter } from "lucide-react";
 import StoreTable from "./StoreTable";
 import StoreDetailDrawer from "./StoreDetailDrawer";
 import { useToast } from "@/components/ui/use-toast";
-// import { useToast } from "../../hooks/use-toast";
+import { moderateStore } from "@/Redux Toolkit/features/store/storeThunks";
 
 export default function StoreListPage() {
+  const dispatch = useDispatch();
   const [selectedStore, setSelectedStore] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { toast } = useToast();
@@ -16,30 +17,47 @@ export default function StoreListPage() {
     setDrawerOpen(true);
   };
 
-  const handleBlockStore = (storeId) => {
-    console.log("Store blocked:", storeId);
-    toast({
-      title: "Store Blocked",
-      description: "The store has been successfully blocked.",
-    });
+  const handleBlockStore = async (storeId) => {
+    try {
+      const updated = await dispatch(
+        moderateStore({ storeId, action: "BLOCKED" })
+      ).unwrap();
+      if (selectedStore?.id === storeId) {
+        setSelectedStore(updated);
+      }
+      toast({
+        title: "Store Blocked",
+        description: "The store status has been updated to BLOCKED.",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to Block Store",
+        description: err || "An error occurred while blocking the store.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleActivateStore = (storeId) => {
-    console.log("Store activated:", storeId);
-    toast({
-      title: "Store Activated",
-      description: "The store has been successfully activated.",
-    });
+  const handleActivateStore = async (storeId) => {
+    try {
+      const updated = await dispatch(
+        moderateStore({ storeId, action: "ACTIVE" })
+      ).unwrap();
+      if (selectedStore?.id === storeId) {
+        setSelectedStore(updated);
+      }
+      toast({
+        title: "Store Activated",
+        description: "The store status has been updated to ACTIVE.",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to Activate Store",
+        description: err || "An error occurred while activating the store.",
+        variant: "destructive",
+      });
+    }
   };
-
-  const handleEditStore = (store) => {
-    toast({
-      title: "Edit Store",
-      description: `Editing store: ${store.name}`,
-    });
-  };
-
-
 
   return (
     <div className="space-y-6">
@@ -50,7 +68,6 @@ export default function StoreListPage() {
             Manage all registered stores and their status
           </p>
         </div>
-       
       </div>
 
       <Card>
@@ -72,8 +89,7 @@ export default function StoreListPage() {
         onOpenChange={setDrawerOpen}
         onBlockStore={handleBlockStore}
         onActivateStore={handleActivateStore}
-        onEditStore={handleEditStore}
       />
     </div>
   );
-} 
+}

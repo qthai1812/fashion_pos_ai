@@ -1,11 +1,6 @@
 package com.zosh.payload.dto;
 
-import com.zosh.modal.Branch;
-import com.zosh.modal.Product;
-import jakarta.persistence.Column;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,4 +26,8 @@ public class InventoryDTO {
     private Integer quantity;
 
     private LocalDateTime lastUpdate;
+
+    private Integer minStockLevel;
+
+
 }

@@ -168,7 +168,7 @@ const LiveDemoSection = () => {
                                 <div className="w-8 h-8 rounded bg-primary/20"></div>
                               </div>
                               <p className="text-xs font-medium text-gray-900 mb-1">Product {i + 1}</p>
-                              <p className="text-xs text-gray-500">₹{((i + 1) * 99).toFixed(2)}</p>
+                              <p className="text-xs text-gray-500">đ{((i + 1) * 99).toFixed(2)}</p>
                             </div>
                           ))}
                         </div>
@@ -180,7 +180,7 @@ const LiveDemoSection = () => {
                           <h3 className="font-medium text-gray-900 mb-1">Current Sale</h3>
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-500">Items: 3</span>
-                            <span className="text-gray-500">Total: ₹547.00</span>
+                            <span className="text-gray-500">Total: đ547.00</span>
                           </div>
                         </div>
                         
@@ -190,12 +190,12 @@ const LiveDemoSection = () => {
                               <div>
                                 <p className="text-sm font-medium">Product {item}</p>
                                 <div className="flex items-center space-x-2 text-xs text-gray-500">
-                                  <span>₹{(item * 99).toFixed(2)}</span>
+                                  <span>đ{(item * 99).toFixed(2)}</span>
                                   <span>×</span>
                                   <span>{item}</span>
                                 </div>
                               </div>
-                              <p className="font-medium">₹{(item * item * 99).toFixed(2)}</p>
+                              <p className="font-medium">đ{(item * item * 99).toFixed(2)}</p>
                             </div>
                           ))}
                         </div>
@@ -203,15 +203,15 @@ const LiveDemoSection = () => {
                         <div className="space-y-2 mb-4">
                           <div className="flex justify-between">
                             <span className="text-gray-700">Subtotal</span>
-                            <span className="font-medium">₹547.00</span>
+                            <span className="font-medium">đ547.00</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-700">Tax (18%)</span>
-                            <span className="font-medium">₹98.46</span>
+                            <span className="font-medium">đ98.46</span>
                           </div>
                           <div className="flex justify-between text-lg font-bold">
                             <span>Total</span>
-                            <span>₹645.46</span>
+                            <span>đ645.46</span>
                           </div>
                         </div>
                         
@@ -231,7 +231,7 @@ const LiveDemoSection = () => {
                         <div key={i} className="bg-gray-50 rounded-lg p-4">
                           <p className="text-sm text-gray-500 mb-1">{title}</p>
                           <p className="text-2xl font-bold text-gray-900">
-                            {i === 0 ? '₹12,450' : i === 1 ? '₹86,320' : '+18.5%'}
+                            {i === 0 ? 'đ12,450' : i === 1 ? 'đ86,320' : '+18.5%'}
                           </p>
                           <div className="flex items-center mt-2">
                             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -303,7 +303,7 @@ const LiveDemoSection = () => {
                         <div key={i} className="grid grid-cols-4 py-2 border-t border-gray-200">
                           <span className="text-sm">#ORD-{1000 + i}</span>
                           <span className="text-sm">Customer {i}</span>
-                          <span className="text-sm">₹{(i * 450).toFixed(2)}</span>
+                          <span className="text-sm">đ{(i * 450).toFixed(2)}</span>
                           <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 inline-block text-center w-20">
                             Completed
                           </span>
@@ -358,7 +358,7 @@ const LiveDemoSection = () => {
                           <div className="text-sm text-gray-600">
                             {['Electronics', 'Clothing', 'Groceries', 'Home Goods', 'Toys'][i]}
                           </div>
-                          <div className="text-sm">₹{((i + 1) * 499).toFixed(2)}</div>
+                          <div className="text-sm">đ{((i + 1) * 499).toFixed(2)}</div>
                           <div>
                             <span className={`text-xs px-2 py-1 rounded-full ${i === 3 ? 'bg-red-100 text-red-800' : i === 2 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
                               {i === 3 ? 'Out of stock' : i === 2 ? 'Low stock' : `${(i + 1) * 25} in stock`}
@@ -395,7 +395,7 @@ const LiveDemoSection = () => {
                         <div key={i} className="bg-gray-50 rounded-lg p-4">
                           <p className="text-sm text-gray-500 mb-1">{title}</p>
                           <p className="text-xl font-bold text-gray-900">
-                            {i === 0 ? '3,542' : i === 1 ? '128' : i === 2 ? '68%' : '₹1,250'}
+                            {i === 0 ? '3,542' : i === 1 ? '128' : i === 2 ? '68%' : 'đ1,250'}
                           </p>
                         </div>
                       ))}
@@ -423,7 +423,7 @@ const LiveDemoSection = () => {
                           </div>
                           <div className="text-sm text-gray-600">customer{i + 1}@example.com</div>
                           <div className="text-sm text-gray-600">+91 98765 4{i}210</div>
-                          <div className="text-sm">₹{((i + 1) * 2500).toLocaleString()}</div>
+                          <div className="text-sm">đ{((i + 1) * 2500).toLocaleString()}</div>
                           <div className="text-sm text-gray-600">{['Today', '2 days ago', '1 week ago', '2 weeks ago', '1 month ago'][i]}</div>
                           <div className="flex space-x-2">
                             <button className="p-1 text-blue-600 hover:text-blue-800">

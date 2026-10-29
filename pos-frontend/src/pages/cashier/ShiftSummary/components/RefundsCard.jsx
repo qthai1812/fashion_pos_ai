@@ -1,7 +1,14 @@
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircleIcon } from 'lucide-react';
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { CheckCircleIcon } from "lucide-react";
 
 const RefundsCard = ({ shiftData }) => {
   return (
@@ -19,12 +26,14 @@ const RefundsCard = ({ shiftData }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {shiftData.refunds.map(refund => (
+              {shiftData.refunds.map((refund) => (
                 <TableRow key={refund.id}>
                   <TableCell className="font-medium">RFD-{refund.id}</TableCell>
                   <TableCell>ORD-{refund.orderId}</TableCell>
                   <TableCell>{refund.reason}</TableCell>
-                  <TableCell className="text-right text-destructive">₹{refund.amount?.toFixed(2)|| 999}</TableCell>
+                  <TableCell className="text-right text-destructive">
+                    đ{refund.amount?.toFixed(2) || 999}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -40,4 +49,4 @@ const RefundsCard = ({ shiftData }) => {
   );
 };
 
-export default RefundsCard; 
+export default RefundsCard;

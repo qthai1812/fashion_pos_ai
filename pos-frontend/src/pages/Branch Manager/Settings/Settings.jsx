@@ -7,7 +7,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -17,33 +16,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Building,
-
-  Printer,
-  Receipt,
-  CreditCard,
-  Save,
-} from "lucide-react";
+import { Building, Printer, Receipt, CreditCard, Save } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
 import { getBranchById } from "@/Redux Toolkit/features/branch/branchThunks";
+import { useToast } from "@/components/ui/use-toast";
 import BranchInfo from "./BranchInfo";
+
+const STORAGE_KEY_PREFIX = "pos_branch_settings_";
 
 const Settings = () => {
   const dispatch = useDispatch();
+  const { toast } = useToast();
   const { userProfile } = useSelector((state) => state.user);
-  // const { branch} = useSelector((state) => state.branch);
-
-  // const [branchInfo, setBranchInfo] = useState({
-  //   name: "",
-  //   address: "",
-  //   phone: "",
-  //   email: "",
-  //   openingTime: "",
-  //   closingTime: "",
-  //   workingDays: [],
-  // });
+  const { branch } = useSelector((state) => state.branch);
 
   useEffect(() => {
     if (userProfile?.branchId && localStorage.getItem("jwt")) {
@@ -56,72 +42,95 @@ const Settings = () => {
     }
   }, [dispatch, userProfile]);
 
-  const [printerSettings, setPrinterSettings] = useState({
-    printerName: "Epson TM-T88VI",
-    paperSize: "80mm",
-    printLogo: true,
-    printCustomerDetails: true,
-    printItemizedTax: true,
-    footerText: "Thank you for shopping with us!",
+  const [printerSettings, setPrinterSettings] = useState(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}printer`);
+    return saved
+      ? JSON.parse(saved)
+      : {
+          printerName: "Epson TM-T88VI",
+          paperSize: "80mm",
+          printLogo: true,
+          printCustomerDetails: true,
+          printItemizedTax: true,
+          footerText: "Thank you for shopping with us!",
+        };
   });
 
-  const [taxSettings, setTaxSettings] = useState({
-    gstEnabled: true,
-    gstPercentage: 18,
-    applyGstToAll: true,
-    showTaxBreakdown: true,
+  const [taxSettings, setTaxSettings] = useState(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}tax`);
+    return saved
+      ? JSON.parse(saved)
+      : {
+          gstEnabled: true,
+          gstPercentage: 18,
+          applyGstToAll: true,
+          showTaxBreakdown: true,
+        };
   });
 
-  const [paymentSettings, setPaymentSettings] = useState({
-    acceptCash: true,
-    acceptUPI: true,
-    acceptCard: true,
-    upiId: "example@upi",
-    cardTerminalId: "TERM12345",
+  const [paymentSettings, setPaymentSettings] = useState(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}payment`);
+    return saved
+      ? JSON.parse(saved)
+      : {
+          acceptCash: true,
+          acceptUPI: true,
+          acceptCard: true,
+          upiId: "example@upi",
+          cardTerminalId: "TERM12345",
+        };
   });
 
-  const [discountSettings, setDiscountSettings] = useState({
-    allowDiscount: true,
-    maxDiscountPercentage: 10,
-    requireManagerApproval: true,
-    discountReasons: [
-      "Damaged Product",
-      "Bulk Purchase",
-      "Regular Customer",
-      "Promotional Offer",
-    ],
+  const [discountSettings, setDiscountSettings] = useState(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}discount`);
+    return saved
+      ? JSON.parse(saved)
+      : {
+          allowDiscount: true,
+          maxDiscountPercentage: 10,
+          requireManagerApproval: true,
+          discountReasons: [
+            "Damaged Product",
+            "Bulk Purchase",
+            "Regular Customer",
+            "Promotional Offer",
+          ],
+        };
   });
 
   const handlePrinterSettingsChange = (field, value) => {
-    setPrinterSettings({
-      ...printerSettings,
-      [field]: value,
-    });
+    setPrinterSettings((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleTaxSettingsChange = (field, value) => {
-    setTaxSettings({
-      ...taxSettings,
-      [field]: value,
-    });
+    setTaxSettings((prev) => ({ ...prev, [field]: value }));
   };
 
   const handlePaymentSettingsChange = (field, value) => {
-    setPaymentSettings({
-      ...paymentSettings,
-      [field]: value,
-    });
+    setPaymentSettings((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleDiscountSettingsChange = (field, value) => {
-    setDiscountSettings({
-      ...discountSettings,
-      [field]: value,
-    });
+    setDiscountSettings((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSaveSettings = (settingType) => {
-    console.log(`Saving ${settingType} settings`);
+    const map = {
+      printer: printerSettings,
+      tax: taxSettings,
+      payment: paymentSettings,
+      discount: discountSettings,
+    };
+    localStorage.setItem(
+      `${STORAGE_KEY_PREFIX}${settingType}`,
+      JSON.stringify(map[settingType])
+    );
+    toast({
+      title: "Settings Saved",
+      description: `Branch ${settingType} configuration has been saved successfully for ${
+        branch?.name || "this branch"
+      }.`,
+    });
   };
 
   return (
@@ -154,39 +163,28 @@ const Settings = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Branch Info Tab */}
-
         <TabsContent value="branch-info">
           <BranchInfo />
         </TabsContent>
 
-        {/* Printer Settings Tab */}
         <TabsContent value="printer">
           <Card>
             <CardHeader>
               <CardTitle>POS Printer Settings</CardTitle>
-              <CardDescription>
-                Configure your receipt printer settings.
-              </CardDescription>
+              <CardDescription>Configure your receipt printer settings.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <label
-                      htmlFor="printer-name"
-                      className="text-sm font-medium"
-                    >
+                    <label htmlFor="printer-name" className="text-sm font-medium">
                       Printer Name
                     </label>
                     <Input
                       id="printer-name"
                       value={printerSettings.printerName}
                       onChange={(e) =>
-                        handlePrinterSettingsChange(
-                          "printerName",
-                          e.target.value
-                        )
+                        handlePrinterSettingsChange("printerName", e.target.value)
                       }
                     />
                   </div>
@@ -226,20 +224,14 @@ const Settings = () => {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="print-customer"
-                      className="text-sm font-medium"
-                    >
+                    <label htmlFor="print-customer" className="text-sm font-medium">
                       Print Customer Details
                     </label>
                     <Switch
                       id="print-customer"
                       checked={printerSettings.printCustomerDetails}
                       onCheckedChange={(checked) =>
-                        handlePrinterSettingsChange(
-                          "printCustomerDetails",
-                          checked
-                        )
+                        handlePrinterSettingsChange("printCustomerDetails", checked)
                       }
                     />
                   </div>
@@ -273,10 +265,7 @@ const Settings = () => {
               </div>
 
               <div className="flex justify-end">
-                <Button
-                  className="gap-2"
-                  onClick={() => handleSaveSettings("printer")}
-                >
+                <Button className="gap-2" onClick={() => handleSaveSettings("printer")}>
                   <Save className="h-4 w-4" />
                   Save Changes
                 </Button>
@@ -285,14 +274,11 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        {/* Tax Settings Tab */}
         <TabsContent value="tax">
           <Card>
             <CardHeader>
               <CardTitle>Tax Settings</CardTitle>
-              <CardDescription>
-                Configure tax rates and rules for your branch.
-              </CardDescription>
+              <CardDescription>Configure tax rates and rules for your branch.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
@@ -312,10 +298,7 @@ const Settings = () => {
                 {taxSettings.gstEnabled && (
                   <div className="space-y-4 pl-6 border-l-2 border-gray-100">
                     <div className="space-y-2">
-                      <label
-                        htmlFor="gst-percentage"
-                        className="text-sm font-medium"
-                      >
+                      <label htmlFor="gst-percentage" className="text-sm font-medium">
                         GST Percentage (%)
                       </label>
                       <Input
@@ -327,17 +310,14 @@ const Settings = () => {
                         onChange={(e) =>
                           handleTaxSettingsChange(
                             "gstPercentage",
-                            parseInt(e.target.value)
+                            parseInt(e.target.value) || 0
                           )
                         }
                       />
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <label
-                        htmlFor="apply-gst-all"
-                        className="text-sm font-medium"
-                      >
+                      <label htmlFor="apply-gst-all" className="text-sm font-medium">
                         Apply GST to All Products
                       </label>
                       <Switch
@@ -350,10 +330,7 @@ const Settings = () => {
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <label
-                        htmlFor="show-tax-breakdown"
-                        className="text-sm font-medium"
-                      >
+                      <label htmlFor="show-tax-breakdown" className="text-sm font-medium">
                         Show Tax Breakdown on Receipt
                       </label>
                       <Switch
@@ -369,10 +346,7 @@ const Settings = () => {
               </div>
 
               <div className="flex justify-end">
-                <Button
-                  className="gap-2"
-                  onClick={() => handleSaveSettings("tax")}
-                >
+                <Button className="gap-2" onClick={() => handleSaveSettings("tax")}>
                   <Save className="h-4 w-4" />
                   Save Changes
                 </Button>
@@ -381,14 +355,11 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        {/* Payment Settings Tab */}
         <TabsContent value="payment">
           <Card>
             <CardHeader>
               <CardTitle>Payment Methods</CardTitle>
-              <CardDescription>
-                Configure accepted payment methods for your branch.
-              </CardDescription>
+              <CardDescription>Configure accepted payment methods for your branch.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
@@ -448,20 +419,14 @@ const Settings = () => {
 
                 {paymentSettings.acceptCard && (
                   <div className="space-y-2 pl-6 border-l-2 border-gray-100">
-                    <label
-                      htmlFor="terminal-id"
-                      className="text-sm font-medium"
-                    >
+                    <label htmlFor="terminal-id" className="text-sm font-medium">
                       Card Terminal ID
                     </label>
                     <Input
                       id="terminal-id"
                       value={paymentSettings.cardTerminalId}
                       onChange={(e) =>
-                        handlePaymentSettingsChange(
-                          "cardTerminalId",
-                          e.target.value
-                        )
+                        handlePaymentSettingsChange("cardTerminalId", e.target.value)
                       }
                     />
                   </div>
@@ -469,10 +434,7 @@ const Settings = () => {
               </div>
 
               <div className="flex justify-end">
-                <Button
-                  className="gap-2"
-                  onClick={() => handleSaveSettings("payment")}
-                >
+                <Button className="gap-2" onClick={() => handleSaveSettings("payment")}>
                   <Save className="h-4 w-4" />
                   Save Changes
                 </Button>
@@ -481,22 +443,16 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        {/* Discount Settings Tab */}
         <TabsContent value="discount">
           <Card>
             <CardHeader>
               <CardTitle>Discount Rules</CardTitle>
-              <CardDescription>
-                Configure discount policies for your branch.
-              </CardDescription>
+              <CardDescription>Configure discount policies for your branch.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="allow-discount"
-                    className="text-sm font-medium"
-                  >
+                  <label htmlFor="allow-discount" className="text-sm font-medium">
                     Allow Discounts
                   </label>
                   <Switch
@@ -511,10 +467,7 @@ const Settings = () => {
                 {discountSettings.allowDiscount && (
                   <div className="space-y-4 pl-6 border-l-2 border-gray-100">
                     <div className="space-y-2">
-                      <label
-                        htmlFor="max-discount"
-                        className="text-sm font-medium"
-                      >
+                      <label htmlFor="max-discount" className="text-sm font-medium">
                         Maximum Discount Percentage (%)
                       </label>
                       <Input
@@ -526,74 +479,61 @@ const Settings = () => {
                         onChange={(e) =>
                           handleDiscountSettingsChange(
                             "maxDiscountPercentage",
-                            parseInt(e.target.value)
+                            parseInt(e.target.value) || 0
                           )
                         }
                       />
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <label
-                        htmlFor="manager-approval"
-                        className="text-sm font-medium"
-                      >
+                      <label htmlFor="manager-approval" className="text-sm font-medium">
                         Require Manager Approval for Discounts
                       </label>
                       <Switch
                         id="manager-approval"
                         checked={discountSettings.requireManagerApproval}
                         onCheckedChange={(checked) =>
-                          handleDiscountSettingsChange(
-                            "requireManagerApproval",
-                            checked
-                          )
+                          handleDiscountSettingsChange("requireManagerApproval", checked)
                         }
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Discount Reasons
-                      </label>
+                      <label className="text-sm font-medium">Discount Reasons</label>
                       <div className="space-y-2">
-                        {discountSettings.discountReasons.map(
-                          (reason, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-2"
+                        {discountSettings.discountReasons.map((reason, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <Input
+                              value={reason}
+                              onChange={(e) => {
+                                const updatedReasons = [
+                                  ...discountSettings.discountReasons,
+                                ];
+                                updatedReasons[index] = e.target.value;
+                                handleDiscountSettingsChange(
+                                  "discountReasons",
+                                  updatedReasons
+                                );
+                              }}
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const updatedReasons =
+                                  discountSettings.discountReasons.filter(
+                                    (_, i) => i !== index
+                                  );
+                                handleDiscountSettingsChange(
+                                  "discountReasons",
+                                  updatedReasons
+                                );
+                              }}
                             >
-                              <Input
-                                value={reason}
-                                onChange={(e) => {
-                                  const updatedReasons = [
-                                    ...discountSettings.discountReasons,
-                                  ];
-                                  updatedReasons[index] = e.target.value;
-                                  handleDiscountSettingsChange(
-                                    "discountReasons",
-                                    updatedReasons
-                                  );
-                                }}
-                              />
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  const updatedReasons =
-                                    discountSettings.discountReasons.filter(
-                                      (_, i) => i !== index
-                                    );
-                                  handleDiscountSettingsChange(
-                                    "discountReasons",
-                                    updatedReasons
-                                  );
-                                }}
-                              >
-                                ✕
-                              </Button>
-                            </div>
-                          )
-                        )}
+                              ✕
+                            </Button>
+                          </div>
+                        ))}
                         <Button
                           variant="outline"
                           size="sm"
@@ -613,10 +553,7 @@ const Settings = () => {
               </div>
 
               <div className="flex justify-end">
-                <Button
-                  className="gap-2"
-                  onClick={() => handleSaveSettings("discount")}
-                >
+                <Button className="gap-2" onClick={() => handleSaveSettings("discount")}>
                   <Save className="h-4 w-4" />
                   Save Changes
                 </Button>

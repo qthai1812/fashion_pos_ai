@@ -82,7 +82,9 @@ public class GlobalExceptionHandler {
                 || lower.contains("invalid") || lower.contains("expired")
                 || lower.contains("disabled") || lower.contains("minimum")
                 || lower.contains("exceeds") || lower.contains("required")
-                || lower.contains("not active") || lower.contains("not supported")) {
+                || lower.contains("not active") || lower.contains("not supported")
+                || lower.contains("loyalty") || lower.contains("redeem")
+                || lower.contains("points") || lower.contains("select a customer")) {
             return buildResponse(msg, HttpStatus.BAD_REQUEST);
         }
 

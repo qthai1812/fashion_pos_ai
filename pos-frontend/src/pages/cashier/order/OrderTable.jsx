@@ -41,8 +41,8 @@ const OrderTable = ({
             <TableCell>
               {order.customer?.fullName || "Walk-in Customer"}
             </TableCell>
-            <TableCell>₹{order.totalAmount?.toFixed(2) || "0.00"}</TableCell>
-            <TableCell>{(order.paymentType)}</TableCell>
+            <TableCell>đ{order.totalAmount?.toFixed(2) || "0.00"}</TableCell>
+            <TableCell>{order.paymentType}</TableCell>
             <TableCell>
               <Badge
                 variant={getStatusBadgeVariant(order.status)}

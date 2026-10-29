@@ -1,36 +1,37 @@
 import React, { useState, useEffect } from "react";
-
+import { useLocation } from "react-router";
 import {
   OrderDetailsSection,
   ReturnItemsSection,
-
   ReturnReceiptDialog,
 } from "./components";
 import { useDispatch, useSelector } from "react-redux";
 import { getOrdersByBranch } from "../../../Redux Toolkit/features/order/orderThunks";
+import { getRefundsByBranch } from "../../../Redux Toolkit/features/refund/refundThunks";
 import OrderTable from "./components/OrderTable";
 
-// Return reasons
-
 const ReturnOrderPage = () => {
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const location = useLocation();
+  const [selectedOrder, setSelectedOrder] = useState(
+    location.state?.selectedOrder || null
+  );
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
+  const [lastRefundInfo, setLastRefundInfo] = useState({
+    reason: "",
+    refundMethod: "",
+  });
 
   const dispatch = useDispatch();
   const { branch } = useSelector((state) => state.branch);
 
-  // Fetch orders for the branch on mount or when branch changes
   useEffect(() => {
-    console.log("branch ", branch);
     if (branch?.id) {
       dispatch(getOrdersByBranch({ branchId: branch.id }));
+      dispatch(getRefundsByBranch(branch.id));
     }
   }, [dispatch, branch]);
 
-
-
   const handleSelectOrder = (order) => {
-    console.log("selected order", order);
     setSelectedOrder(order);
   };
 
@@ -41,7 +42,6 @@ const ReturnOrderPage = () => {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Column - Order Search & Selection */}
         {!selectedOrder ? (
           <OrderTable handleSelectOrder={handleSelectOrder} />
         ) : (
@@ -53,6 +53,7 @@ const ReturnOrderPage = () => {
             <ReturnItemsSection
               setShowReceiptDialog={setShowReceiptDialog}
               selectedOrder={selectedOrder}
+              onRefundSuccess={(info) => setLastRefundInfo(info)}
             />
           </>
         )}
@@ -61,8 +62,13 @@ const ReturnOrderPage = () => {
       {selectedOrder && (
         <ReturnReceiptDialog
           showReceiptDialog={showReceiptDialog}
-          setShowReceiptDialog={setShowReceiptDialog}
+          setShowReceiptDialog={(open) => {
+            setShowReceiptDialog(open);
+            if (!open) setSelectedOrder(null);
+          }}
           selectedOrder={selectedOrder}
+          returnReason={lastRefundInfo.reason}
+          refundMethod={lastRefundInfo.refundMethod}
         />
       )}
     </div>

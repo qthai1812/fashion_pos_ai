@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 import {
   createBranch,
   getBranchById,
@@ -7,7 +7,7 @@ import {
   deleteBranch,
   // addEmployeeToBranch,
   // getEmployeesByBranch
-} from './branchThunks';
+} from "./branchThunks";
 
 const initialState = {
   branch: null,
@@ -18,7 +18,7 @@ const initialState = {
 };
 
 const branchSlice = createSlice({
-  name: 'branch',
+  name: "branch",
   initialState,
   reducers: {
     clearBranchState: (state) => {
@@ -61,20 +61,26 @@ const branchSlice = createSlice({
 
       .addCase(updateBranch.fulfilled, (state, action) => {
         state.branch = action.payload;
+        const index = state.branches.findIndex(
+          (b) => b.id === action.payload.id,
+        );
+        if (index !== -1) {
+          state.branches[index] = action.payload;
+        }
       })
 
       .addCase(deleteBranch.fulfilled, (state, action) => {
         state.branches = state.branches.filter((b) => b.id !== action.payload);
       })
 
-
-
       .addMatcher(
-        (action) => action.type.startsWith('branch/') && action.type.endsWith('/rejected'),
+        (action) =>
+          action.type.startsWith("branch/") &&
+          action.type.endsWith("/rejected"),
         (state, action) => {
           state.error = action.payload;
           state.loading = false;
-        }
+        },
       );
   },
 });

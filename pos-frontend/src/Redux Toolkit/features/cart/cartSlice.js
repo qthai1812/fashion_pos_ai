@@ -5,9 +5,10 @@ const initialState = {
   selectedCustomer: null,
   note: "",
   discount: { type: "percentage", value: 0 },
-  paymentMethod: "cash",
+  paymentMethod: "CASH",
   heldOrders: [],
   currentOrder: null,
+  couponCode: null,
 };
 
 const cartSlice = createSlice({
@@ -51,12 +52,17 @@ const cartSlice = createSlice({
       state.selectedCustomer = null;
       state.note = "";
       state.discount = { type: "percentage", value: 0 };
-      state.paymentMethod = "cash";
+      state.paymentMethod = "CASH";
       state.currentOrder = null;
+      state.couponCode = null;
     },
 
     setSelectedCustomer: (state, action) => {
       state.selectedCustomer = action.payload;
+    },
+
+    setCouponCode: (state, action) => {
+      state.couponCode = action.payload;
     },
 
     setNote: (state, action) => {
@@ -68,7 +74,9 @@ const cartSlice = createSlice({
     },
 
     setPaymentMethod: (state, action) => {
-      state.paymentMethod = action.payload;
+      state.paymentMethod = action.payload
+        ? action.payload.toUpperCase()
+        : "CASH";
     },
 
     holdOrder: (state) => {
@@ -79,16 +87,16 @@ const cartSlice = createSlice({
           customer: state.selectedCustomer,
           note: state.note,
           discount: state.discount,
+          couponCode: state.couponCode,
           timestamp: new Date(),
         };
-
         state.heldOrders.push(heldOrder);
 
-        // Reset current order
         state.items = [];
         state.selectedCustomer = null;
         state.note = "";
         state.discount = { type: "percentage", value: 0 };
+        state.couponCode = null;
       }
     },
 
@@ -97,9 +105,9 @@ const cartSlice = createSlice({
       state.items = order.items;
       state.selectedCustomer = order.customer;
       state.note = order.note;
-      state.discount = order.discount;
+      state.discount = order.discount || { type: "percentage", value: 0 };
+      state.couponCode = order.couponCode || null;
 
-      // Remove from held orders
       state.heldOrders = state.heldOrders.filter((o) => o.id !== order.id);
     },
 
@@ -112,13 +120,13 @@ const cartSlice = createSlice({
       state.selectedCustomer = null;
       state.note = "";
       state.discount = { type: "percentage", value: 0 };
-      state.paymentMethod = "cash";
+      state.paymentMethod = "CASH";
       state.currentOrder = null;
+      state.couponCode = null;
     },
   },
 });
 
-// Selectors
 export const selectCartItems = (state) => state.cart.items;
 export const selectCartItemCount = (state) => state.cart.items.length;
 export const selectSelectedCustomer = (state) => state.cart.selectedCustomer;
@@ -127,28 +135,29 @@ export const selectDiscount = (state) => state.cart.discount;
 export const selectPaymentMethod = (state) => state.cart.paymentMethod;
 export const selectHeldOrders = (state) => state.cart.heldOrders;
 export const selectCurrentOrder = (state) => state.cart.currentOrder;
+export const selectCouponCode = (state) => state.cart.couponCode;
 
-// Calculation selectors
 export const selectSubtotal = (state) => {
   return state.cart.items.reduce(
-    (total, item) => total + item.sellingPrice * item.quantity,
-    0
+    (total, item) =>
+      total + (item.sellingPrice ?? item.price ?? 0) * item.quantity,
+    0,
   );
 };
 
 export const selectTax = (state) => {
   const subtotal = selectSubtotal(state);
-  return subtotal * 0.18; // 18% GST
+  return subtotal * 0.1;
 };
 
 export const selectDiscountAmount = (state) => {
   const subtotal = selectSubtotal(state);
   const discount = state.cart.discount;
-
+  if (!discount || !discount.value || subtotal <= 0) return 0;
   if (discount.type === "percentage") {
-    return subtotal * (discount.value / 100);
+    return Math.min(subtotal, subtotal * (discount.value / 100));
   } else {
-    return discount.value;
+    return Math.min(subtotal, Number(discount.value) || 0);
   }
 };
 
@@ -156,7 +165,7 @@ export const selectTotal = (state) => {
   const subtotal = selectSubtotal(state);
   const tax = selectTax(state);
   const discountAmount = selectDiscountAmount(state);
-  return subtotal + tax - discountAmount;
+  return Math.max(0, subtotal + tax - discountAmount);
 };
 
 export const {
@@ -168,6 +177,7 @@ export const {
   setNote,
   setDiscount,
   setPaymentMethod,
+  setCouponCode,
   holdOrder,
   resumeOrder,
   setCurrentOrder,

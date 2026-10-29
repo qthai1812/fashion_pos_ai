@@ -2,6 +2,7 @@ package com.zosh.modal;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,11 +19,15 @@ public class ShiftReport {
     private Long id;
 
     private LocalDateTime shiftStart;
+
     private LocalDateTime shiftEnd;
 
     private Double totalSales;
+
     private Double totalRefunds;
+
     private Double netSale;
+
     private int totalOrders;
 
     @ManyToOne
@@ -34,14 +39,12 @@ public class ShiftReport {
     @Transient
     private List<PaymentSummary> paymentSummaries;
 
-    @OneToMany(cascade = CascadeType.ALL)
+    @Transient
     private List<Product> topSellingProducts;
 
-    @OneToMany(cascade = CascadeType.ALL)
+    @Transient
     private List<Order> recentOrders;
 
-    @OneToMany(mappedBy = "shiftReport",  cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "shiftReport", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<Refund> refunds;
-
-
 }

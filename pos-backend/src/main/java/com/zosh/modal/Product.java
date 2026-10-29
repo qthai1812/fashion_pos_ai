@@ -1,7 +1,5 @@
 package com.zosh.modal;
 
-
-import com.zosh.domain.StoreStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -13,6 +11,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@Table(
+        name = "product",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_product_store_sku", columnNames = {"store_id", "sku"})
+        }
+)
 public class Product {
 
     @Id
@@ -22,33 +26,40 @@ public class Product {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String sku;
 
     private String description;
 
     private Double mrp;
+
     private Double sellingPrice;
+
     private String brand;
+
     private String image;
 
     @ManyToOne
+    @JoinColumn(name = "category_id")
     private Category category;
 
     @ManyToOne
+    @JoinColumn(name = "store_id")
     private Store store;
 
     private LocalDateTime createdAt;
+
     private LocalDateTime updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-
+        this.updatedAt = LocalDateTime.now();
     }
 }

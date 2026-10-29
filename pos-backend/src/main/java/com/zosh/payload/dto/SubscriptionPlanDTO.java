@@ -3,6 +3,7 @@ package com.zosh.payload.dto;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -32,6 +33,7 @@ public class SubscriptionPlanDTO {
     private Boolean multiLocation;
 
     private String description;
+    private List<String> extraFeatures;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

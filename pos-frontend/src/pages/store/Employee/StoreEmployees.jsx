@@ -17,12 +17,14 @@ import {
   updateEmployee,
   deleteEmployee,
 } from "@/Redux Toolkit/features/employee/employeeThunks";
+import { getAllBranchesByStore } from "@/Redux Toolkit/features/branch/branchThunks";
 import { storeAdminRole } from "../../../utils/userRole";
 
 export default function StoreEmployees() {
   const dispatch = useDispatch();
   const { employees } = useSelector((state) => state.employee);
-  const {store}=useSelector(state=>state.store)
+  const { store } = useSelector(state => state.store);
+  const { branches } = useSelector((state) => state.branch);
 
   useEffect(() => {
     if (store?.id) {
@@ -32,8 +34,14 @@ export default function StoreEmployees() {
           token: localStorage.getItem("jwt"),
         })
       );
+      dispatch(
+        getAllBranchesByStore({
+          storeId: store?.id,
+          jwt: localStorage.getItem("jwt"),
+        })
+      );
     }
-  }, [dispatch, store?.id, localStorage.getItem("jwt")]);
+  }, [dispatch, store?.id]);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -123,7 +131,12 @@ export default function StoreEmployees() {
                 currentEmployee
                   ? {
                       ...currentEmployee,
-                      branchId: currentEmployee.branchId || "",
+                      fullName: currentEmployee.fullName || "",
+                      email: currentEmployee.email || "",
+                      password: "",
+                      phone: currentEmployee.phone || "",
+                      role: currentEmployee.role || "",
+                      branchId: currentEmployee.branchId ? String(currentEmployee.branchId) : "",
                     }
                   : null
               }
@@ -134,6 +147,7 @@ export default function StoreEmployees() {
 
       <EmployeeTable
         employees={employees}
+        branches={branches}
         onEdit={openEditDialog}
         onDelete={handleDeleteEmployee}
       />

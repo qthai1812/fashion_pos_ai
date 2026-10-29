@@ -28,7 +28,6 @@ public class InventoryController {
             @RequestBody InventoryDTO inventoryDTO,
             @PathVariable Long id
     ) throws Exception {
-
         return ResponseEntity.ok(inventoryService.updateInventory(id, inventoryDTO));
     }
 
@@ -37,10 +36,16 @@ public class InventoryController {
             @PathVariable Long id
     ) throws Exception {
         inventoryService.deleteInventory(id);
-
         ApiResponse apiResponse = new ApiResponse();
         apiResponse.setMessage("Inventory deleted successfully");
         return ResponseEntity.ok(apiResponse);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<InventoryDTO> getInventoryById(
+            @PathVariable Long id
+    ) throws Exception {
+        return ResponseEntity.ok(inventoryService.getInventoryById(id));
     }
 
     @GetMapping("/branch/{branchId}/product/{productId}")
@@ -58,6 +63,4 @@ public class InventoryController {
     ) throws Exception {
         return ResponseEntity.ok(inventoryService.getAllInventoryByBranchId(branchId));
     }
-
-
 }
