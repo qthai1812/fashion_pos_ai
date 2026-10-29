@@ -1,7 +1,6 @@
 package com.zosh.repository;
 
 import com.zosh.modal.Product;
-import com.zosh.payload.dto.ProductDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,6 +10,8 @@ import java.util.List;
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByStoreId(Long storeId);
+
+    List<Product> findByCategoryId(Long categoryId);
 
     @Query(
             "SELECT p FROM Product p " +
@@ -23,4 +24,3 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> searchByKeyword(@Param("storeId") Long storeId,
                                   @Param("query") String keyword);
 }
-

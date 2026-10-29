@@ -10,7 +10,7 @@ import { Tag } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const DiscountSection = () => {
+const DiscountSection = ({ discountInputRef }) => {
   const dispatch = useDispatch();
   const discount = useSelector(selectDiscount);
   const couponCode = useSelector(selectCouponCode);
@@ -46,9 +46,10 @@ const DiscountSection = () => {
       </h2>
       <div className="space-y-3">
         <Input
+          ref={discountInputRef}
           type="number"
           min="0"
-          placeholder="Discount amount"
+          placeholder="Discount amount (F2)"
           value={discount.value || ""}
           onChange={handleSetDiscount}
           disabled={isRedeemingPoints}

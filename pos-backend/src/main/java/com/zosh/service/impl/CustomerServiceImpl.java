@@ -1,7 +1,9 @@
 package com.zosh.service.impl;
 
 import com.zosh.modal.Customer;
+import com.zosh.modal.Order;
 import com.zosh.repository.CustomerRepository;
+import com.zosh.repository.OrderRepository;
 import com.zosh.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import java.util.List;
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final OrderRepository orderRepository;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -57,6 +60,11 @@ public class CustomerServiceImpl implements CustomerService {
         Customer customerToDelete = customerRepository.findById(id).orElseThrow(
                 () -> new Exception("Customer not found")
         );
+        List<Order> customerOrders = orderRepository.findByCustomerId(id);
+        for (Order order : customerOrders) {
+            order.setCustomer(null);
+            orderRepository.save(order);
+        }
         customerRepository.delete(customerToDelete);
     }
 

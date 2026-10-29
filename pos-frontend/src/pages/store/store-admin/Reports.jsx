@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -34,13 +34,8 @@ export default function Reports() {
     (state) => state.storeAnalytics,
   );
 
-  useEffect(() => {
-    if (userProfile?.id) {
-      fetchReportsData();
-    }
-  }, [userProfile]);
-
-  const fetchReportsData = async () => {
+  const fetchReportsData = useCallback(async () => {
+    if (!userProfile?.id) return;
     try {
       await Promise.all([
         dispatch(getMonthlySales(userProfile.id)).unwrap(),
@@ -53,7 +48,13 @@ export default function Reports() {
         variant: "destructive",
       });
     }
-  };
+  }, [dispatch, toast, userProfile?.id]);
+
+  useEffect(() => {
+    if (userProfile?.id) {
+      fetchReportsData();
+    }
+  }, [fetchReportsData, userProfile?.id]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("vi-VN", {

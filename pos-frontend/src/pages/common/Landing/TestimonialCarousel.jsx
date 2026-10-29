@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight, Star, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -56,12 +56,12 @@ const TestimonialCarousel = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const nextTestimonial = () => {
+  const nextTestimonial = useCallback(() => {
     if (isAnimating) return;
     setIsAnimating(true);
     setActiveIndex((prev) => (prev === testimonials.length - 1 ? 0 : prev + 1));
     setTimeout(() => setIsAnimating(false), 500);
-  };
+  }, [isAnimating, testimonials.length]);
 
   const prevTestimonial = () => {
     if (isAnimating) return;
@@ -76,7 +76,7 @@ const TestimonialCarousel = () => {
       nextTestimonial();
     }, 8000);
     return () => clearInterval(interval);
-  }, [activeIndex]);
+  }, [nextTestimonial]);
 
   return (
     <section className="py-16 bg-gray-50 overflow-hidden">

@@ -139,7 +139,7 @@ const Upgrade = () => {
                     </h3>
                     <div className="flex items-baseline justify-center">
                       <span className="text-4xl font-bold text-foreground">
-                        ₹{Number(plan.price || 0).toLocaleString()}
+                        đ{Number(plan.price || 0).toLocaleString()}
                       </span>
                       <span className="text-muted-foreground ml-1">
                         /{plan.billingCycle?.toLowerCase()}

@@ -47,7 +47,8 @@ const InactiveCashierTable = () => {
                 <TableCell>
                   <div className="flex items-center gap-1">
                     <Tag className="h-4 w-4 text-gray-400" />
-                    {cashier.branchName}
+                    {cashier.branchName ||
+                      (cashier.branchId ? `Branch #${cashier.branchId}` : "N/A")}
                   </div>
                 </TableCell>
                 <TableCell className="text-right">

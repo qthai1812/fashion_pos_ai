@@ -1,6 +1,5 @@
 package com.zosh.payload.dto;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,7 +24,9 @@ public class ProductDTO {
     private Double mrp;
     private Double sellingPrice;
     private String brand;
+    private String color;
     private String image;
+    private Integer quantity;
 
     private CategoryDTO category;
 

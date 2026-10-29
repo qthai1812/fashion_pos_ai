@@ -25,10 +25,14 @@ const CreateOrderPage = () => {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "F1" || e.key === "F2") {
+      if (e.key === "F1") {
         e.preventDefault();
         setActiveMobileTab("products");
         searchInputRef.current?.focus();
+      } else if (e.key === "F2") {
+        e.preventDefault();
+        setActiveMobileTab("payment");
+        discountInputRef.current?.focus();
       } else if (e.key === "F3" || e.key === "F4") {
         e.preventDefault();
         setShowCustomerDialog(true);

@@ -2,7 +2,14 @@ package com.zosh.service.impl;
 
 import com.zosh.domain.OrderStatus;
 import com.zosh.domain.UserRole;
+import com.zosh.mapper.BranchMapper;
+import com.zosh.mapper.ProductMapper;
+import com.zosh.mapper.RefundMapper;
+import com.zosh.mapper.UserMapper;
 import com.zosh.modal.*;
+import com.zosh.payload.dto.BranchDTO;
+import com.zosh.payload.dto.ProductDTO;
+import com.zosh.payload.dto.UserDto;
 import com.zosh.payload.response.*;
 import com.zosh.repository.*;
 import com.zosh.service.StoreAnalyticsService;
@@ -27,6 +34,7 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
     private final ProductRepository productRepository;
     private final InventoryRepository inventoryRepository;
     private final StoreRepository storeRepository;
+    private final RefundRepository refundRepository;
 
     private Store resolveStoreAndValidateAccess(Long userOrStoreAdminId) throws Exception {
         User targetUser = userRepository.findById(userOrStoreAdminId)
@@ -57,7 +65,7 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
     private List<Order> getAllOrdersForUser(Long storeAdminId) throws Exception {
         Store store = resolveStoreAndValidateAccess(storeAdminId);
         return orderRepository.findAllByStoreIdWithDetails(store.getId()).stream()
-                .filter(o -> o.getStatus() != OrderStatus.REFUNDED)
+                .filter(o -> o.getStatus() != OrderStatus.REFUNDED && o.getStatus() != OrderStatus.CANCELLED)
                 .collect(Collectors.toList());
     }
 
@@ -214,7 +222,9 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
         List<BranchPerformanceDTO> result = new ArrayList<>();
         for (Branch branch : branches) {
             List<Order> branchOrders = orderRepository.findByBranchId(branch.getId())
-                    .stream().filter(o -> o.getStatus() != com.zosh.domain.OrderStatus.REFUNDED).collect(Collectors.toList());
+                    .stream()
+                    .filter(o -> o.getStatus() != OrderStatus.REFUNDED && o.getStatus() != OrderStatus.CANCELLED)
+                    .collect(Collectors.toList());
             double rev = branchOrders.stream().mapToDouble(o -> o.getTotalAmount() != null ? o.getTotalAmount() : 0).sum();
             double avg = branchOrders.isEmpty() ? 0 : rev / branchOrders.size();
             int empCount = userRepository.findByBranchId(branch.getId()).size();
@@ -229,28 +239,31 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
         Long storeId = store.getId();
         List<Branch> branches = branchRepository.findByStoreId(storeId);
 
-        List<com.zosh.payload.dto.ProductDTO> lowStockAlerts = new ArrayList<>();
-        List<com.zosh.payload.dto.BranchDTO> noSaleToday = new ArrayList<>();
-        List<com.zosh.payload.dto.UserDto> inactiveCashiers = new ArrayList<>();
+        Map<Long, ProductDTO> lowStockAlertMap = new LinkedHashMap<>();
+        List<BranchDTO> noSaleToday = new ArrayList<>();
+        List<UserDto> inactiveCashiers = new ArrayList<>();
         List<Object> refundSpike = new ArrayList<>();
 
         LocalDate today = LocalDate.now();
-        LocalDateTime cutoffInactive = LocalDateTime.now().minusDays(7);
+        LocalDateTime cutoff7Days = LocalDateTime.now().minusDays(7);
 
         for (Branch branch : branches) {
             List<Order> todayOrders = orderRepository.findByBranchIdAndCreatedAtBetween(
-                    branch.getId(), today.atStartOfDay(), today.plusDays(1).atStartOfDay())
-                    .stream().filter(o -> o.getStatus() != com.zosh.domain.OrderStatus.REFUNDED)
+                            branch.getId(), today.atStartOfDay(), today.plusDays(1).atStartOfDay())
+                    .stream()
+                    .filter(o -> o.getStatus() != OrderStatus.REFUNDED && o.getStatus() != OrderStatus.CANCELLED)
                     .collect(Collectors.toList());
             if (todayOrders.isEmpty()) {
-                noSaleToday.add(com.zosh.mapper.BranchMapper.toDTO(branch));
+                noSaleToday.add(BranchMapper.toDTO(branch));
             }
 
             List<Inventory> inventories = inventoryRepository.findByBranchId(branch.getId());
             for (Inventory inv : inventories) {
                 if (inv.getQuantity() != null && inv.getMinStockLevel() != null && inv.getQuantity() <= inv.getMinStockLevel()) {
-                    if (inv.getProduct() != null) {
-                        lowStockAlerts.add(com.zosh.mapper.ProductMapper.toDTO(inv.getProduct()));
+                    if (inv.getProduct() != null && inv.getProduct().getId() != null) {
+                        ProductDTO dto = ProductMapper.toDTO(inv.getProduct());
+                        dto.setQuantity(inv.getQuantity());
+                        lowStockAlertMap.putIfAbsent(inv.getProduct().getId(), dto);
                     }
                 }
             }
@@ -258,16 +271,23 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
             List<User> branchCashiers = userRepository.findByBranchId(branch.getId());
             for (User cashier : branchCashiers) {
                 if (cashier.getRole() == UserRole.ROLE_BRANCH_CASHIER) {
-                    if (cashier.getLastLogin() == null || cashier.getLastLogin().isBefore(cutoffInactive)) {
-                        inactiveCashiers.add(com.zosh.mapper.UserMapper.toDTO(cashier));
+                    if (cashier.getLastLogin() == null || cashier.getLastLogin().isBefore(cutoff7Days)) {
+                        inactiveCashiers.add(UserMapper.toDTO(cashier));
                     }
+                }
+            }
+
+            List<Refund> branchRefunds = refundRepository.findByBranchId(branch.getId());
+            for (Refund refund : branchRefunds) {
+                if (refund.getCreatedAt() == null || !refund.getCreatedAt().isBefore(cutoff7Days)) {
+                    refundSpike.add(RefundMapper.toDTO(refund));
                 }
             }
         }
 
         return StoreAlertsDTO.builder()
                 .inactiveCashiers(inactiveCashiers)
-                .lowStockAlerts(lowStockAlerts)
+                .lowStockAlerts(new ArrayList<>(lowStockAlertMap.values()))
                 .noSaleToday(noSaleToday)
                 .refundSpike(refundSpike)
                 .build();

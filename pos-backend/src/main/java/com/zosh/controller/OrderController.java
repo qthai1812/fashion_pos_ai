@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -31,6 +32,18 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrderById(id));
     }
 
+    @RequestMapping(value = "/{id}/status", method = {RequestMethod.PATCH, RequestMethod.PUT})
+    public ResponseEntity<OrderDTO> updateOrderStatus(
+            @PathVariable Long id,
+            @RequestParam(required = false) OrderStatus status,
+            @RequestBody(required = false) Map<String, String> body) throws Exception {
+        OrderStatus effectiveStatus = status;
+        if (effectiveStatus == null && body != null && body.get("status") != null) {
+            effectiveStatus = OrderStatus.valueOf(body.get("status").trim().toUpperCase());
+        }
+        return ResponseEntity.ok(orderService.updateOrderStatus(id, effectiveStatus));
+    }
+
     @GetMapping("/branch/{branchId}")
     public ResponseEntity<List<OrderDTO>> getOrderByBranch(
             @PathVariable Long branchId,
@@ -42,6 +55,7 @@ public class OrderController {
         OrderStatus effectiveStatus = status != null ? status : orderStatus;
         return ResponseEntity.ok(orderService.getOrdersByBranch(branchId, customerId, cashierId, paymentType, effectiveStatus));
     }
+
     @GetMapping("/cashier/{id}")
     public ResponseEntity<List<OrderDTO>> getOrderByCashier(
             @PathVariable Long id) throws Exception {
@@ -66,7 +80,6 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getTop5RecentOrdersByBranchId(branchId));
     }
 
-    // ✅ Added: was missing DELETE endpoint despite service having deleteOrder()
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse> deleteOrder(
             @PathVariable Long id) throws Exception {

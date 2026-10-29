@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Card,
   CardContent,
@@ -27,9 +28,12 @@ import {
 import { Label } from "../../components/ui/label";
 import { DollarSign, Edit, TrendingUp, TrendingDown } from "lucide-react";
 import { useToast } from "../../components/ui/use-toast";
-// import { useToast } from "../../hooks/use-toast";
+import {
+  getAllStores,
+  updateStore,
+} from "../../Redux Toolkit/features/store/storeThunks";
 
-// Mock commission data
+// Fallback commission data when no stores exist yet
 const mockCommissions = [
   {
     id: 1,
@@ -61,11 +65,66 @@ const mockCommissions = [
 ];
 
 export default function CommissionsPage() {
-  const [commissions, setCommissions] = useState(mockCommissions);
+  const dispatch = useDispatch();
+  const { stores = [] } = useSelector((state) => state.store);
+  const [rateOverrides, setRateOverrides] = useState({});
   const [selectedCommission, setSelectedCommission] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [newRate, setNewRate] = useState("");
   const { toast } = useToast();
+
+  useEffect(() => {
+    dispatch(getAllStores());
+  }, [dispatch]);
+
+  const commissions = useMemo(() => {
+    if (stores && stores.length > 0) {
+      return stores.map((store) => {
+        const override = rateOverrides[store.id];
+        const currentRate =
+          override?.currentRate ?? store.commissionRate ?? 2.5;
+        const previousRate =
+          override?.previousRate ?? store.commissionRate ?? 2.5;
+        const lastUpdated =
+          override?.lastUpdated ||
+          (store.updatedAt || store.createdAt || new Date().toISOString()).split(
+            "T"
+          )[0];
+        return {
+          id: store.id,
+          storeName: store.brand || `Store #${store.id}`,
+          currentRate: Number(currentRate),
+          previousRate: Number(previousRate),
+          totalEarnings: store.totalEarnings ?? 0,
+          lastUpdated,
+          status: (store.status || "ACTIVE").toLowerCase(),
+          rawStore: store,
+        };
+      });
+    }
+    return mockCommissions.map((comm) => {
+      const override = rateOverrides[comm.id];
+      return override ? { ...comm, ...override } : comm;
+    });
+  }, [stores, rateOverrides]);
+
+  const totalEarnings = useMemo(
+    () =>
+      commissions.reduce(
+        (sum, item) => sum + (Number(item.totalEarnings) || 0),
+        0
+      ),
+    [commissions]
+  );
+
+  const averageRate = useMemo(() => {
+    if (!commissions.length) return 0;
+    const sum = commissions.reduce(
+      (acc, item) => acc + (Number(item.currentRate) || 0),
+      0
+    );
+    return (sum / commissions.length).toFixed(1);
+  }, [commissions]);
 
   const handleEditCommission = (commission) => {
     setSelectedCommission(commission);
@@ -73,8 +132,8 @@ export default function CommissionsPage() {
     setEditDialogOpen(true);
   };
 
-  const confirmEditCommission = () => {
-    if (selectedCommission && newRate) {
+  const confirmEditCommission = async () => {
+    if (selectedCommission && newRate !== "") {
       const rate = parseFloat(newRate);
       if (isNaN(rate) || rate < 0 || rate > 10) {
         toast({
@@ -85,26 +144,47 @@ export default function CommissionsPage() {
         return;
       }
 
-      setCommissions((prev) =>
-        prev.map((comm) =>
-          comm.id === selectedCommission.id
-            ? {
-                ...comm,
-                currentRate: rate,
-                lastUpdated: new Date().toISOString().split("T")[0],
-              }
-            : comm,
-        ),
-      );
+      try {
+        if (selectedCommission.rawStore) {
+          await dispatch(
+            updateStore({
+              id: selectedCommission.id,
+              storeData: {
+                ...selectedCommission.rawStore,
+                brand: selectedCommission.storeName,
+                commissionRate: rate,
+              },
+            })
+          ).unwrap();
+        }
 
-      toast({
-        title: "Commission Updated",
-        description: `Commission rate for ${selectedCommission.storeName} has been updated to ${rate}%`,
-      });
+        setRateOverrides((prev) => ({
+          ...prev,
+          [selectedCommission.id]: {
+            previousRate: selectedCommission.currentRate,
+            currentRate: rate,
+            lastUpdated: new Date().toISOString().split("T")[0],
+          },
+        }));
 
-      setEditDialogOpen(false);
-      setSelectedCommission(null);
-      setNewRate("");
+        toast({
+          title: "Commission Updated",
+          description: `Commission rate for ${selectedCommission.storeName} has been updated to ${rate}%`,
+        });
+
+        setEditDialogOpen(false);
+        setSelectedCommission(null);
+        setNewRate("");
+      } catch (err) {
+        toast({
+          title: "Update Failed",
+          description:
+            typeof err === "string"
+              ? err
+              : "Failed to update store commission rate",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -146,7 +226,9 @@ export default function CommissionsPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">đ37,000</div>
+            <div className="text-2xl font-bold">
+              đ{totalEarnings.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
               +12% from last month
             </p>
@@ -158,7 +240,7 @@ export default function CommissionsPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2.5%</div>
+            <div className="text-2xl font-bold">{averageRate}%</div>
             <p className="text-xs text-muted-foreground">
               +0.2% from last month
             </p>

@@ -1,7 +1,8 @@
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useLocation } from "react-router";
 import { useSelector, useDispatch } from "react-redux";
 import { useEffect } from "react";
 import { getBranchById } from "../../../Redux Toolkit/features/branch/branchThunks";
+import { endShift } from "../../../Redux Toolkit/features/shiftReport/shiftReportThunks";
 import { Button } from "../../../components/ui/button";
 import { LogOutIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -12,8 +13,9 @@ import BranchInfo from "./BranchInfo";
 const CashierSideBar = ({ navItems, onClose }) => {
   const dispatch = useDispatch();
   const { userProfile } = useSelector((state) => state.user);
-  const { branch, loading, error } = useSelector((state) => state.branch);
+  const { branch } = useSelector((state) => state.branch);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (userProfile && userProfile.branchId) {
@@ -26,8 +28,13 @@ const CashierSideBar = ({ navItems, onClose }) => {
     }
   }, [dispatch, userProfile]);
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    try {
+      await dispatch(endShift()).unwrap();
+    } catch {
+      // Ignore if no active shift
+    }
+    await dispatch(logout());
     navigate("/");
   };
 

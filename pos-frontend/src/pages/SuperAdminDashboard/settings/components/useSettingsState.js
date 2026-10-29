@@ -17,10 +17,10 @@ export const useSettingsState = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("jwt");
-    if (token) {
+    if (token && !userProfile) {
       dispatch(getUserProfile(token));
     }
-  }, [dispatch]);
+  }, [dispatch, userProfile]);
 
   useEffect(() => {
     if (userProfile) {
@@ -128,13 +128,17 @@ export const useSettingsState = () => {
     if (savedNotif) {
       try {
         setNotifications(JSON.parse(savedNotif));
-      } catch (_) {}
+      } catch {
+        // ignore invalid stored JSON
+      }
     }
     const savedSys = localStorage.getItem("superadmin_system_settings");
     if (savedSys) {
       try {
         setSystemSettings(JSON.parse(savedSys));
-      } catch (_) {}
+      } catch {
+        // ignore invalid stored JSON
+      }
     }
   }, []);
 

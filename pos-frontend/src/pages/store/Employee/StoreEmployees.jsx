@@ -19,12 +19,23 @@ import {
 } from "@/Redux Toolkit/features/employee/employeeThunks";
 import { getAllBranchesByStore } from "@/Redux Toolkit/features/branch/branchThunks";
 import { storeAdminRole } from "../../../utils/userRole";
+import { toast } from "sonner";
 
 export default function StoreEmployees() {
   const dispatch = useDispatch();
   const { employees } = useSelector((state) => state.employee);
-  const { store } = useSelector(state => state.store);
+  const { store } = useSelector((state) => state.store);
   const { branches } = useSelector((state) => state.branch);
+  const { userProfile } = useSelector((state) => state.user);
+  const [accessOverrides, setAccessOverrides] = useState(() => {
+    try {
+      localStorage.removeItem("pos_employee_access_overrides");
+      const saved = localStorage.getItem("pos_disabled_employees_v2");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
 
   useEffect(() => {
     if (store?.id) {
@@ -32,13 +43,13 @@ export default function StoreEmployees() {
         findStoreEmployees({
           storeId: store?.id,
           token: localStorage.getItem("jwt"),
-        })
+        }),
       );
       dispatch(
         getAllBranchesByStore({
           storeId: store?.id,
           jwt: localStorage.getItem("jwt"),
-        })
+        }),
       );
     }
   }, [dispatch, store?.id]);
@@ -47,45 +58,158 @@ export default function StoreEmployees() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentEmployee, setCurrentEmployee] = useState(null);
 
-  const handleAddEmployee = (newEmployeeData) => {
+  const handleAddEmployee = async (newEmployeeData) => {
     if (store?.id && localStorage.getItem("jwt")) {
-      dispatch(
-        createStoreEmployee({
-          employee: {
-            ...newEmployeeData,
+      try {
+        await dispatch(
+          createStoreEmployee({
+            employee: {
+              ...newEmployeeData,
+              storeId: store?.id,
+              username: newEmployeeData.email.split("@")[0],
+            },
             storeId: store?.id,
-            username: newEmployeeData.email.split("@")[0],
-          },
-          storeId: store?.id,
-          token: localStorage.getItem("jwt"),
-        })
-      );
-      setIsAddDialogOpen(false);
+            token: localStorage.getItem("jwt"),
+          }),
+        ).unwrap();
+        toast.success("Employee added successfully!");
+        setIsAddDialogOpen(false);
+      } catch (err) {
+        toast.error(
+          typeof err === "string" ? err : "Failed to create employee",
+        );
+      }
     }
   };
 
-  const handleEditEmployee = (updatedEmployeeData) => {
+  const handleEditEmployee = async (updatedEmployeeData) => {
     if (currentEmployee?.id && localStorage.getItem("jwt")) {
-      dispatch(
-        updateEmployee({
-          employeeId: currentEmployee.id,
-          employeeDetails: updatedEmployeeData,
-          token: localStorage.getItem("jwt"),
-        })
-      );
-      setIsEditDialogOpen(false);
+      try {
+        await dispatch(
+          updateEmployee({
+            employeeId: currentEmployee.id,
+            employeeDetails: updatedEmployeeData,
+            token: localStorage.getItem("jwt"),
+          }),
+        ).unwrap();
+        toast.success("Employee updated successfully!");
+        setIsEditDialogOpen(false);
+      } catch (err) {
+        toast.error(
+          typeof err === "string" ? err : "Failed to update employee",
+        );
+      }
     }
   };
 
-  const handleDeleteEmployee = (id) => {
+  const handleDeleteEmployee = async (id) => {
     if (localStorage.getItem("jwt")) {
-      dispatch(deleteEmployee({ employeeId: id, token: localStorage.getItem("jwt") }));
+      try {
+        await dispatch(
+          deleteEmployee({
+            employeeId: id,
+            token: localStorage.getItem("jwt"),
+          }),
+        ).unwrap();
+        toast.success("Employee deleted successfully!");
+      } catch (err) {
+        toast.error(
+          typeof err === "string" ? err : "Failed to delete employee",
+        );
+      }
     }
   };
 
   const openEditDialog = (employee) => {
     setCurrentEmployee(employee);
     setIsEditDialogOpen(true);
+  };
+
+  const employeesWithAccess = (employees || []).map((emp) => {
+    if (
+      userProfile &&
+      (emp.id === userProfile.id ||
+        (emp.email &&
+          userProfile.email &&
+          emp.email.toLowerCase() === userProfile.email.toLowerCase()))
+    ) {
+      return { ...emp, loginAccess: true };
+    }
+    const emailKey = emp.email?.toLowerCase();
+    const overrideVal =
+      accessOverrides[emp.id] !== undefined
+        ? accessOverrides[emp.id]
+        : emailKey && typeof accessOverrides[emailKey] === "boolean"
+          ? accessOverrides[emailKey]
+          : undefined;
+    return {
+      ...emp,
+      loginAccess:
+        overrideVal !== undefined ? overrideVal : emp.loginAccess !== false,
+    };
+  });
+
+  const handleToggleAccess = async (employee) => {
+    const isSelf =
+      userProfile &&
+      (employee.id === userProfile.id ||
+        (employee.email &&
+          userProfile.email &&
+          employee.email.toLowerCase() === userProfile.email.toLowerCase()));
+    const nextAccess = !(employee.loginAccess !== false);
+    if (!nextAccess && (isSelf || employee.role === "ROLE_STORE_ADMIN" || employee.role === "ROLE_ADMIN")) {
+      toast.error("You cannot disable login access for your own Store Admin account.");
+      return;
+    }
+
+    const emailKey = employee.email?.toLowerCase();
+    setAccessOverrides((prev) => {
+      const updated = {
+        ...prev,
+        [employee.id]: nextAccess,
+        ...(emailKey ? { [emailKey]: nextAccess } : {}),
+      };
+      localStorage.setItem("pos_disabled_employees_v2", JSON.stringify(updated));
+      return updated;
+    });
+
+    if (employee?.id && localStorage.getItem("jwt")) {
+      try {
+        await dispatch(
+          updateEmployee({
+            employeeId: employee.id,
+            employeeDetails: {
+              ...employee,
+              loginAccess: nextAccess,
+            },
+            token: localStorage.getItem("jwt"),
+          }),
+        ).unwrap();
+        toast.success(
+          `${employee.fullName}'s login access is now ${
+            nextAccess ? "enabled" : "disabled"
+          }.`,
+        );
+      } catch (err) {
+        setAccessOverrides((prev) => {
+          const reverted = {
+            ...prev,
+            [employee.id]: !nextAccess,
+            ...(emailKey ? { [emailKey]: !nextAccess } : {}),
+          };
+          localStorage.setItem(
+            "pos_disabled_employees_v2",
+            JSON.stringify(reverted),
+          );
+          return reverted;
+        });
+        toast.error(
+          typeof err === "string"
+            ? err
+            : "Failed to update employee login access",
+        );
+      }
+    }
   };
 
   return (
@@ -146,8 +270,10 @@ export default function StoreEmployees() {
       </div>
 
       <EmployeeTable
-        employees={employees}
+        employees={employeesWithAccess}
+        currentUser={userProfile}
         branches={branches}
+        onToggleAccess={handleToggleAccess}
         onEdit={openEditDialog}
         onDelete={handleDeleteEmployee}
       />

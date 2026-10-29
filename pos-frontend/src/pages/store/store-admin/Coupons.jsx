@@ -41,7 +41,7 @@ export default function Coupons() {
   const { toast } = useToast();
 
   const { store } = useSelector((state) => state.store);
-  const { coupons, loading, error } = useSelector((state) => state.coupon);
+  const { coupons, error } = useSelector((state) => state.coupon);
 
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -91,7 +91,7 @@ export default function Coupons() {
       }
       setOpen(false);
       resetForm();
-    } catch (err) {
+    } catch {
       // Error handled by useEffect
     }
   };
@@ -115,7 +115,7 @@ export default function Coupons() {
       try {
         await dispatch(deleteCoupon(id)).unwrap();
         toast({ title: "Success", description: "Coupon deleted successfully" });
-      } catch (err) {
+      } catch {
         // Error handled by useEffect
       }
     }

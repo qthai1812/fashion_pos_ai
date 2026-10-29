@@ -31,7 +31,7 @@ export const createCustomer = createAsyncThunk(
       
       console.log('✅ Customer created successfully:', {
         customerId: res.data.id,
-        name: res.data.name,
+        name: res.data.fullName,
         email: res.data.email,
         response: res.data
       });
@@ -62,7 +62,7 @@ export const updateCustomer = createAsyncThunk(
       
       console.log('✅ Customer updated successfully:', {
         customerId: res.data.id,
-        name: res.data.name,
+        name: res.data.fullName,
         email: res.data.email,
         response: res.data
       });

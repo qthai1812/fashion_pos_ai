@@ -32,7 +32,7 @@ const RefundsCard = ({ shiftData }) => {
                   <TableCell>ORD-{refund.orderId}</TableCell>
                   <TableCell>{refund.reason}</TableCell>
                   <TableCell className="text-right text-destructive">
-                    đ{refund.amount?.toFixed(2) || 999}
+                    đ{(refund.amount ?? 0).toFixed(2)}
                   </TableCell>
                 </TableRow>
               ))}

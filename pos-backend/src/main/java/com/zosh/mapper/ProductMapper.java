@@ -8,6 +8,9 @@ import com.zosh.payload.dto.ProductDTO;
 public class ProductMapper {
 
     public static ProductDTO toDTO(Product product) {
+        if (product == null) {
+            return null;
+        }
         return ProductDTO.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -16,6 +19,8 @@ public class ProductMapper {
                 .mrp(product.getMrp())
                 .sellingPrice(product.getSellingPrice())
                 .brand(product.getBrand())
+                .color(product.getColor())
+                .quantity(product.getQuantity())
                 .category(product.getCategory() != null ? CategoryMapper.toDTO(product.getCategory()) : null)
                 .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
                 .storeId(product.getStore() != null ? product.getStore().getId() : null)
@@ -37,6 +42,7 @@ public class ProductMapper {
                 .mrp(productDTO.getMrp())
                 .sellingPrice(productDTO.getSellingPrice())
                 .brand(productDTO.getBrand())
+                .color(productDTO.getColor())
                 .image(productDTO.getImage())
                 .build();
     }

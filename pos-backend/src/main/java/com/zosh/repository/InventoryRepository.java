@@ -26,6 +26,8 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     List<Inventory> findByBranchId(Long branchId);
 
+    List<Inventory> findByProductId(Long productId);
+
     /**
      * Pessimistic write lock (SELECT ... FOR UPDATE) — chống race condition.
      * Trả về 1 row duy nhất (sau khi đã dedup).

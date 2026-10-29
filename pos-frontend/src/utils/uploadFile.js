@@ -1,25 +1,22 @@
+import api from "./api";
+
 export const uploadFileToServer = async (file) => {
   if (!file) return;
-  
-  const data = new FormData();
-  data.append("file", file);
+
+  const formData = new FormData();
+  formData.append("file", file);
 
   const token = localStorage.getItem("jwt");
 
   try {
-    const res = await fetch(`http://localhost:5000/api/media/upload`, {
-      method: "POST",
+    const res = await api.post("/api/media/upload", formData, {
       headers: {
-        Authorization: `Bearer ${token}`
+        "Content-Type": "multipart/form-data",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: data,
     });
-    
-    if (!res.ok) {
-      throw new Error("Upload failed");
-    }
-    
-    const fileData = await res.json();
+
+    const fileData = res.data;
     console.log("url : ", fileData);
     return fileData.url;
   } catch (error) {

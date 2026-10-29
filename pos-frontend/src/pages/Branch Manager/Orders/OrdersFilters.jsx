@@ -1,5 +1,4 @@
-import React from "react";
-import { Input } from "@/components/ui/input";
+import React, { useState } from "react";
 import {
   Select,
   SelectContent,
@@ -7,17 +6,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Filter } from "lucide-react";
-import { useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { useSelector } from "react-redux";
-import { useState } from "react";
+import { Filter } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
 import { paymentModeMap, statusMap } from "./data";
 import { getOrdersByBranch } from "../../../Redux Toolkit/features/order/orderThunks";
 
 const OrdersFilters = () => {
-
-    const dispatch = useDispatch();
+  const dispatch = useDispatch();
   const branchId = useSelector((state) => state.branch.branch?.id);
   const { employees } = useSelector((state) => state.employee);
 
@@ -27,20 +22,21 @@ const OrdersFilters = () => {
     status: "all",
   });
 
-    useEffect(() => {
-      if (branchId) {
-        const data = {
-          branchId,
-          cashierId: filters.cashierId !== "all" ? filters.cashierId : undefined,
-          paymentType: paymentModeMap[filters.paymentMode],
-          status: statusMap[filters.status],
-        };
-        console.log("filters data ", data);
-        dispatch(getOrdersByBranch(data));
-      }
-    }, [branchId, filters, dispatch]);
-
-
+  const handleFilterChange = (updatedFilters) => {
+    setFilters(updatedFilters);
+    if (branchId) {
+      const data = {
+        branchId,
+        cashierId:
+          updatedFilters.cashierId !== "all"
+            ? updatedFilters.cashierId
+            : undefined,
+        paymentType: paymentModeMap[updatedFilters.paymentMode],
+        status: statusMap[updatedFilters.status],
+      };
+      dispatch(getOrdersByBranch(data));
+    }
+  };
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -49,7 +45,7 @@ const OrdersFilters = () => {
         <Select
           value={filters.paymentMode}
           onValueChange={(value) =>
-            setFilters({ ...filters, paymentMode: value })
+            handleFilterChange({ ...filters, paymentMode: value })
           }
         >
           <SelectTrigger
@@ -71,7 +67,7 @@ const OrdersFilters = () => {
         <Select
           value={filters.cashierId}
           onValueChange={(value) =>
-            setFilters({ ...filters, cashierId: value })
+            handleFilterChange({ ...filters, cashierId: value })
           }
         >
           <SelectTrigger
@@ -95,7 +91,9 @@ const OrdersFilters = () => {
       <div>
         <Select
           value={filters.status}
-          onValueChange={(value) => setFilters({ ...filters, status: value })}
+          onValueChange={(value) =>
+            handleFilterChange({ ...filters, status: value })
+          }
         >
           <SelectTrigger
             startIcon={<Filter className="h-4 w-4 text-gray-500" />}

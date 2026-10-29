@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getStoreByAdmin,
+  getStoreByEmployee,
   updateStore,
 } from "@/Redux Toolkit/features/store/storeThunks";
 import { toast } from "@/components/ui/use-toast";
@@ -14,6 +15,7 @@ import {
 export default function Settings() {
   const dispatch = useDispatch();
   const { store } = useSelector((state) => state.store);
+  const { userProfile } = useSelector((state) => state.user);
 
   const [storeSettings, setStoreSettings] = useState({
     storeName: "My POS Store",
@@ -65,12 +67,18 @@ export default function Settings() {
         if (parsed.securitySettings)
           setSecuritySettings(parsed.securitySettings);
         if (parsed.paymentSettings) setPaymentSettings(parsed.paymentSettings);
-      } catch (_) {}
+      } catch {
+        // Ignore invalid JSON in localStorage
+      }
     }
 
     const fetchStoreData = async () => {
       try {
-        await dispatch(getStoreByAdmin()).unwrap();
+        if (userProfile?.role === "ROLE_STORE_MANAGER") {
+          await dispatch(getStoreByEmployee()).unwrap();
+        } else {
+          await dispatch(getStoreByAdmin()).unwrap();
+        }
       } catch (err) {
         toast({
           title: "Error",
@@ -81,7 +89,7 @@ export default function Settings() {
     };
 
     fetchStoreData();
-  }, [dispatch]);
+  }, [dispatch, userProfile?.role]);
 
   useEffect(() => {
     if (store) {

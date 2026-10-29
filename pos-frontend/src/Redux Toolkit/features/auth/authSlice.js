@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { login, signup, forgotPassword, resetPassword } from "./authThunk";
+import { logout as userLogout } from "../user/userThunks";
 
 // ✅ Auth Slice
 const authSlice = createSlice({
@@ -71,7 +72,7 @@ const authSlice = createSlice({
         state.forgotPasswordError = null;
         state.forgotPasswordSuccess = false;
       })
-      .addCase(forgotPassword.fulfilled, (state, action) => {
+      .addCase(forgotPassword.fulfilled, (state) => {
         state.loading = false;
         state.forgotPasswordLoading = false;
         state.forgotPasswordSuccess = true;
@@ -92,7 +93,7 @@ const authSlice = createSlice({
         state.resetPasswordError = null;
         state.resetPasswordSuccess = false;
       })
-      .addCase(resetPassword.fulfilled, (state, action) => {
+      .addCase(resetPassword.fulfilled, (state) => {
         state.loading = false;
         state.resetPasswordLoading = false;
         state.resetPasswordSuccess = true;
@@ -104,6 +105,11 @@ const authSlice = createSlice({
         state.resetPasswordError = action.payload;
         state.resetPasswordSuccess = false;
         state.error = action.payload;
+      })
+      .addCase(userLogout.fulfilled, (state) => {
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
       });
   },
 });

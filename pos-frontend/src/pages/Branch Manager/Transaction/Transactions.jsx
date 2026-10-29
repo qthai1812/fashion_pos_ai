@@ -19,11 +19,13 @@ import {
 import TransactionTable from "./TransactionTable";
 import { useSelector, useDispatch } from "react-redux";
 import { getOrdersByBranch } from "../../../Redux Toolkit/features/order/orderThunks";
+import { getRefundsByBranch } from "../../../Redux Toolkit/features/refund/refundThunks";
 import { useToast } from "@/components/ui/use-toast";
 import { handleDownloadOrderPDF } from "../../cashier/order/pdf/pdfUtils";
 
 export default function Transactions() {
   const { orders = [] } = useSelector((state) => state.order);
+  const { refundsByBranch = [] } = useSelector((state) => state.refund || {});
   const { branch } = useSelector((state) => state.branch);
   const dispatch = useDispatch();
   const { toast } = useToast();
@@ -34,6 +36,7 @@ export default function Transactions() {
   useEffect(() => {
     if (branch?.id) {
       dispatch(getOrdersByBranch({ branchId: branch.id }));
+      dispatch(getRefundsByBranch(branch.id));
     }
   }, [branch, dispatch]);
 
@@ -53,9 +56,17 @@ export default function Transactions() {
     .filter((t) => t.totalAmount > 0)
     .reduce((sum, t) => sum + t.totalAmount, 0);
 
-  const totalExpenses = filteredTransactions
-    .filter((t) => t.totalAmount < 0)
-    .reduce((sum, t) => sum + Math.abs(t.totalAmount), 0);
+  const refundedOrdersTotal = filteredTransactions
+    .filter((t) => t.status === "REFUNDED")
+    .reduce((sum, t) => sum + Math.abs(t.totalAmount || 0), 0);
+
+  const branchRefundsTotal = (refundsByBranch || []).reduce(
+    (sum, r) => sum + Math.abs(r.amount || 0),
+    0,
+  );
+
+  const totalExpenses =
+    branchRefundsTotal > 0 ? branchRefundsTotal : refundedOrdersTotal;
 
   const netAmount = totalIncome - totalExpenses || 0;
 

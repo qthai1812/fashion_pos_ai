@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/table";
 import { formatTime } from "../../../../utils/formateDate";
 import { getPaymentIcon } from "../../../../utils/getPaymentIcon";
-import { getPaymentMethodLabel } from "../../../../utils/paymentMethodLable";
 
 const RecentOrdersCard = ({ shiftData }) => {
   return (

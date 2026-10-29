@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent } from "@/components/ui/card";
 import { DollarSign, Store, ShoppingCart, Users } from "lucide-react";
@@ -13,13 +13,8 @@ const DashboardStats = () => {
   );
   const { userProfile } = useSelector((state) => state.user);
 
-  useEffect(() => {
-    if (userProfile?.id) {
-      fetchStoreOverview();
-    }
-  }, [userProfile]);
-
-  const fetchStoreOverview = async () => {
+  const fetchStoreOverview = useCallback(async () => {
+    if (!userProfile?.id) return;
     try {
       await dispatch(getStoreOverview(userProfile.id)).unwrap();
     } catch (err) {
@@ -29,15 +24,16 @@ const DashboardStats = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [dispatch, toast, userProfile?.id]);
+
+  useEffect(() => {
+    if (userProfile?.id) {
+      fetchStoreOverview();
+    }
+  }, [fetchStoreOverview, userProfile?.id]);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount || 0);
+    return `đ${Number(amount || 0).toLocaleString("vi-VN")}`;
   };
 
   // Mapped accurately to Backend StoreOverviewDTO:

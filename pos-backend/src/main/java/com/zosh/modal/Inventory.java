@@ -36,7 +36,8 @@ public class Inventory {
     private Integer quantity;
 
     // Low stock threshold — alert when quantity drops below this
-    private Integer minStockLevel = 5;
+    @Builder.Default
+    private Integer minStockLevel = 10;
 
     private LocalDateTime lastUpdate;
 

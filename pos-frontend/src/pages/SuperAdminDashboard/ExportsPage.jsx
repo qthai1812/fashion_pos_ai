@@ -1,13 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Badge } from "../../components/ui/badge";
-import { Download, FileText, Calendar, Filter, CheckCircle } from "lucide-react";
+import { Download, FileText, Calendar, CheckCircle } from "lucide-react";
 import { useToast } from "../../components/ui/use-toast";
-// import { useToast } from "../../hooks/use-toast";
+import { getAllStores } from "../../Redux Toolkit/features/store/storeThunks";
+import { getAllSubscriptionPlans } from "../../Redux Toolkit/features/subscriptionPlan/subscriptionPlanThunks";
 
 const exportTypes = [
   {
@@ -21,14 +23,14 @@ const exportTypes = [
     id: "store-status",
     name: "Store Status Summary",
     description: "Summary of store statuses and registration dates",
-    format: "Excel",
+    format: "CSV",
     icon: <FileText className="w-5 h-5" />,
   },
   {
     id: "commission-report",
     name: "Commission Report",
     description: "Detailed commission earnings and rates for all stores",
-    format: "Excel",
+    format: "CSV",
     icon: <FileText className="w-5 h-5" />,
   },
   {
@@ -40,40 +42,158 @@ const exportTypes = [
   },
 ];
 
-const recentExports = [
+const initialRecentExports = [
   {
     id: 1,
+    typeId: "store-list",
     type: "Store List",
     date: "2025-01-15 14:30",
     status: "completed",
-    size: "2.3 MB",
+    size: "2.3 KB",
     downloads: 3,
   },
   {
     id: 2,
+    typeId: "commission-report",
     type: "Commission Report",
     date: "2025-01-14 09:15",
     status: "completed",
-    size: "1.8 MB",
+    size: "1.8 KB",
     downloads: 1,
   },
   {
     id: 3,
+    typeId: "store-status",
     type: "Store Status Summary",
     date: "2025-01-13 16:45",
     status: "completed",
-    size: "1.2 MB",
+    size: "1.2 KB",
     downloads: 2,
   },
 ];
 
 export default function ExportsPage() {
+  const dispatch = useDispatch();
+  const { stores = [] } = useSelector((state) => state.store);
+  const { plans = [] } = useSelector((state) => state.subscriptionPlan);
   const [selectedType, setSelectedType] = useState("");
   const [dateRange, setDateRange] = useState({ from: "", to: "" });
   const [isExporting, setIsExporting] = useState(false);
+  const [recentExports, setRecentExports] = useState(initialRecentExports);
   const { toast } = useToast();
 
-  const handleExport = async () => {
+  useEffect(() => {
+    dispatch(getAllStores());
+    dispatch(getAllSubscriptionPlans());
+  }, [dispatch]);
+
+  const buildCsvContent = (typeId) => {
+    const filteredStores = (stores || []).filter((store) => {
+      if (!store.createdAt) return true;
+      const createdDate = new Date(store.createdAt);
+      if (dateRange.from && createdDate < new Date(dateRange.from)) return false;
+      if (dateRange.to && createdDate > new Date(`${dateRange.to}T23:59:59`))
+        return false;
+      return true;
+    });
+
+    const escapeCsv = (val) =>
+      `"${String(val ?? "").replace(/"/g, '""')}"`;
+
+    let rows = [];
+    if (typeId === "store-status") {
+      rows = [
+        ["Store ID", "Brand", "Status", "Store Type", "Created At", "Updated At"],
+        ...filteredStores.map((s) => [
+          s.id,
+          s.brand || "",
+          s.status || "PENDING",
+          s.storeType || "",
+          s.createdAt || "",
+          s.updatedAt || "",
+        ]),
+      ];
+    } else if (typeId === "commission-report") {
+      rows = [
+        [
+          "Store ID",
+          "Brand",
+          "Status",
+          "Commission Rate (%)",
+          "Subscription Plan Count",
+        ],
+        ...filteredStores.map((s) => [
+          s.id,
+          s.brand || "",
+          s.status || "ACTIVE",
+          s.commissionRate ?? 2.5,
+          plans.length,
+        ]),
+      ];
+    } else if (typeId === "pending-requests") {
+      const pending = filteredStores.filter(
+        (s) => (s.status || "").toUpperCase() === "PENDING"
+      );
+      rows = [
+        ["Store ID", "Brand", "Owner", "Email", "Phone", "Submitted At"],
+        ...pending.map((s) => [
+          s.id,
+          s.brand || "",
+          s.storeAdmin?.fullName || "",
+          s.contact?.email || "",
+          s.contact?.phone || "",
+          s.createdAt || "",
+        ]),
+      ];
+    } else {
+      rows = [
+        [
+          "Store ID",
+          "Brand",
+          "Owner",
+          "Email",
+          "Phone",
+          "Address",
+          "Status",
+          "Created At",
+        ],
+        ...filteredStores.map((s) => [
+          s.id,
+          s.brand || "",
+          s.storeAdmin?.fullName || "",
+          s.contact?.email || "",
+          s.contact?.phone || "",
+          s.contact?.address || "",
+          s.status || "",
+          s.createdAt || "",
+        ]),
+      ];
+    }
+
+    return rows.map((r) => r.map(escapeCsv).join(",")).join("\n");
+  };
+
+  const triggerCsvDownload = (typeId, fileLabel) => {
+    const csvContent = buildCsvContent(typeId);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const safeName = (fileLabel || typeId || "export")
+      .toLowerCase()
+      .replace(/\s+/g, "-");
+    link.setAttribute(
+      "download",
+      `${safeName}-${new Date().toISOString().split("T")[0]}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return `${Math.max(0.1, blob.size / 1024).toFixed(1)} KB`;
+  };
+
+  const handleExport = () => {
     if (!selectedType) {
       toast({
         title: "Select Export Type",
@@ -84,24 +204,45 @@ export default function ExportsPage() {
     }
 
     setIsExporting(true);
-    
-    // Simulate export process
-    setTimeout(() => {
-      const exportType = exportTypes.find(type => type.id === selectedType);
-      toast({
-        title: "Export Started",
-        description: `${exportType.name} export has been initiated. You'll receive a notification when it's ready.`,
-      });
-      setIsExporting(false);
-      setSelectedType("");
-      setDateRange({ from: "", to: "" });
-    }, 2000);
+    const exportType = exportTypes.find((type) => type.id === selectedType);
+    const sizeLabel = triggerCsvDownload(selectedType, exportType?.name);
+    const nowStr = new Date().toISOString().slice(0, 16).replace("T", " ");
+
+    setRecentExports((prev) => [
+      {
+        id: Date.now(),
+        typeId: selectedType,
+        type: exportType?.name || "Export",
+        date: nowStr,
+        status: "completed",
+        size: sizeLabel,
+        downloads: 1,
+      },
+      ...prev,
+    ]);
+
+    toast({
+      title: "Export Completed",
+      description: `${exportType?.name} has been generated and downloaded.`,
+    });
+    setIsExporting(false);
+    setSelectedType("");
+    setDateRange({ from: "", to: "" });
   };
 
   const handleDownload = (exportId) => {
+    const target = recentExports.find((item) => item.id === exportId);
+    triggerCsvDownload(target?.typeId || "store-list", target?.type || "export");
+    setRecentExports((prev) =>
+      prev.map((item) =>
+        item.id === exportId
+          ? { ...item, downloads: (item.downloads || 0) + 1 }
+          : item
+      )
+    );
     toast({
       title: "Download Started",
-      description: "Your file download has begun.",
+      description: `Downloading ${target?.type || "export"} CSV file.`,
     });
   };
 

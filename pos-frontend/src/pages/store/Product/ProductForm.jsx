@@ -56,10 +56,12 @@ const ProductForm = ({
     mrp: "",
     sellingPrice: "",
     brand: "",
-    categoryId: "",
     color: "",
     image: null,
     ...initialValues,
+    categoryId: String(
+      initialValues?.categoryId || initialValues?.category?.id || "",
+    ),
   };
 
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {

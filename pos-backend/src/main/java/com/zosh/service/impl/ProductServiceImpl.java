@@ -2,14 +2,9 @@ package com.zosh.service.impl;
 
 import com.zosh.domain.UserRole;
 import com.zosh.mapper.ProductMapper;
-import com.zosh.modal.Category;
-import com.zosh.modal.Product;
-import com.zosh.modal.Store;
-import com.zosh.modal.User;
+import com.zosh.modal.*;
 import com.zosh.payload.dto.ProductDTO;
-import com.zosh.repository.CategoryRepository;
-import com.zosh.repository.ProductRepository;
-import com.zosh.repository.StoreRepository;
+import com.zosh.repository.*;
 import com.zosh.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +21,8 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final StoreRepository storeRepository;
     private final CategoryRepository categoryRepository;
+    private final InventoryRepository inventoryRepository;
+    private final OrderItemRepository orderItemRepository;
 
     private void validateStoreAccess(User user, Store store) throws Exception {
         if (user == null || store == null) {
@@ -47,14 +44,33 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ProductDTO createProduct(ProductDTO productDTO, User user) throws Exception {
-        Store store = storeRepository.findById(productDTO.getStoreId()).orElseThrow(
-                () -> new Exception("Store not found")
-        );
+        Store store = null;
+        if (productDTO.getStoreId() != null) {
+            store = storeRepository.findById(productDTO.getStoreId()).orElseThrow(
+                    () -> new Exception("Store not found")
+            );
+        } else if (user != null) {
+            if (user.getStore() != null) {
+                store = user.getStore();
+            } else {
+                store = storeRepository.findByStoreAdminId(user.getId());
+            }
+        }
+        if (store == null) {
+            throw new Exception("Store not found");
+        }
         validateStoreAccess(user, store);
 
-        Category category = categoryRepository.findById(productDTO.getCategoryId()).orElseThrow(
-                () -> new Exception("Category not found")
-        );
+        Category category = null;
+        if (productDTO.getCategoryId() != null) {
+            category = categoryRepository.findById(productDTO.getCategoryId()).orElseThrow(
+                    () -> new Exception("Category not found")
+            );
+            if (category.getStore() != null && !category.getStore().getId().equals(store.getId())) {
+                throw new Exception("Category does not belong to this store");
+            }
+        }
+
         Product product = ProductMapper.toEntity(productDTO, store, category);
         Product savedProduct = productRepository.save(product);
         return ProductMapper.toDTO(savedProduct);
@@ -77,19 +93,40 @@ public class ProductServiceImpl implements ProductService {
         );
         validateStoreAccess(user, product.getStore());
 
-        product.setName(productDTO.getName());
-        product.setDescription(productDTO.getDescription());
-        product.setSku(productDTO.getSku());
-        product.setImage(productDTO.getImage());
-        product.setMrp(productDTO.getMrp());
-        product.setSellingPrice(productDTO.getSellingPrice());
-        product.setBrand(productDTO.getBrand());
+        if (productDTO.getName() != null) {
+            product.setName(productDTO.getName());
+        }
+        if (productDTO.getDescription() != null) {
+            product.setDescription(productDTO.getDescription());
+        }
+        if (productDTO.getSku() != null) {
+            product.setSku(productDTO.getSku());
+        }
+        if (productDTO.getImage() != null) {
+            product.setImage(productDTO.getImage());
+        }
+        if (productDTO.getMrp() != null) {
+            product.setMrp(productDTO.getMrp());
+        }
+        if (productDTO.getSellingPrice() != null) {
+            product.setSellingPrice(productDTO.getSellingPrice());
+        }
+        if (productDTO.getBrand() != null) {
+            product.setBrand(productDTO.getBrand());
+        }
+        if (productDTO.getColor() != null) {
+            product.setColor(productDTO.getColor());
+        }
         product.setUpdatedAt(LocalDateTime.now());
 
         if (productDTO.getCategoryId() != null) {
             Category category = categoryRepository.findById(productDTO.getCategoryId()).orElseThrow(
                     () -> new Exception("category not found")
             );
+            if (category.getStore() != null && product.getStore() != null
+                    && !category.getStore().getId().equals(product.getStore().getId())) {
+                throw new Exception("Category does not belong to this store");
+            }
             product.setCategory(category);
         }
 
@@ -104,6 +141,18 @@ public class ProductServiceImpl implements ProductService {
                 () -> new Exception("product not found")
         );
         validateStoreAccess(user, product.getStore());
+
+        List<Inventory> inventories = inventoryRepository.findByProductId(id);
+        if (!inventories.isEmpty()) {
+            inventoryRepository.deleteAll(inventories);
+        }
+
+        List<OrderItem> orderItems = orderItemRepository.findByProductId(id);
+        for (OrderItem item : orderItems) {
+            item.setProduct(null);
+            orderItemRepository.save(item);
+        }
+
         productRepository.delete(product);
     }
 

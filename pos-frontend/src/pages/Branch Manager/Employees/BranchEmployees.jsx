@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { branchAdminRole } from "../../../utils/userRole";
 import { useToast } from "@/components/ui/use-toast";
+import { toast as sonnerToast } from "sonner";
 import EmployeeStats from "./EmployeeStats";
 import EmployeeTable from "./EmployeeTable";
 import {
@@ -18,6 +19,7 @@ import {
   findBranchEmployees,
   updateEmployee,
 } from "../../../Redux Toolkit/features/employee/employeeThunks";
+import { getOrdersByBranch } from "../../../Redux Toolkit/features/order/orderThunks";
 
 const getStatusColor = (status) => {
   if (status === "Active") return "text-green-500";
@@ -33,7 +35,15 @@ const BranchEmployees = () => {
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [isPerformanceDialogOpen, setIsPerformanceDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [accessOverrides, setAccessOverrides] = useState({});
+  const [accessOverrides, setAccessOverrides] = useState(() => {
+    try {
+      localStorage.removeItem("pos_employee_access_overrides");
+      const saved = localStorage.getItem("pos_disabled_employees_v2");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
 
   const dispatch = useDispatch();
   const { branch } = useSelector((state) => state.branch);
@@ -44,23 +54,55 @@ const BranchEmployees = () => {
     setSearchTerm(e.target.value);
   };
 
-  const filteredEmployees = (employees || [])
-    .map((emp) => ({
+  const isSelfOrManager = (emp) => {
+    if (!emp) return false;
+    const isSelf =
+      userProfile &&
+      (emp.id === userProfile.id ||
+        (emp.email &&
+          userProfile.email &&
+          emp.email.toLowerCase() === userProfile.email.toLowerCase()));
+    const isManager =
+      emp.role === "ROLE_BRANCH_MANAGER" ||
+      emp.role === "ROLE_STORE_ADMIN" ||
+      emp.role === "ROLE_STORE_MANAGER" ||
+      emp.role === "ROLE_ADMIN";
+    return Boolean(isSelf || isManager);
+  };
+
+  const employeesWithAccess = (employees || []).map((emp) => {
+    if (
+      userProfile &&
+      (emp.id === userProfile.id ||
+        (emp.email &&
+          userProfile.email &&
+          emp.email.toLowerCase() === userProfile.email.toLowerCase()))
+    ) {
+      return { ...emp, loginAccess: true };
+    }
+    const emailKey = emp.email?.toLowerCase();
+    const overrideVal =
+      accessOverrides[emp.id] !== undefined
+        ? accessOverrides[emp.id]
+        : emailKey && typeof accessOverrides[emailKey] === "boolean"
+          ? accessOverrides[emailKey]
+          : undefined;
+    return {
       ...emp,
       loginAccess:
-        accessOverrides[emp.id] !== undefined
-          ? accessOverrides[emp.id]
-          : emp.loginAccess !== false,
-    }))
-    .filter(
-      (emp) =>
-        emp.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.phone?.includes(searchTerm) ||
-        emp.role?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+        overrideVal !== undefined ? overrideVal : emp.loginAccess !== false,
+    };
+  });
 
-  const handleAddEmployee = (newEmployeeData) => {
+  const filteredEmployees = employeesWithAccess.filter(
+    (emp) =>
+      emp.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.phone?.includes(searchTerm) ||
+      emp.role?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleAddEmployee = async (newEmployeeData) => {
     const targetBranchId = branch?.id || userProfile?.branchId;
     if (targetBranchId) {
       const data = {
@@ -71,58 +113,141 @@ const BranchEmployees = () => {
         branchId: targetBranchId,
         token: localStorage.getItem("jwt"),
       };
-      dispatch(createBranchEmployee(data));
-      setIsAddDialogOpen(false);
-      toast({
-        title: "Employee Created",
-        description: `${newEmployeeData.fullName} has been added to the branch.`,
-      });
+      try {
+        await dispatch(createBranchEmployee(data)).unwrap();
+        setIsAddDialogOpen(false);
+        sonnerToast.success(
+          `${newEmployeeData.fullName} has been added to the branch.`,
+        );
+        toast({
+          title: "Employee Created",
+          description: `${newEmployeeData.fullName} has been added to the branch.`,
+        });
+      } catch (err) {
+        const msg =
+          typeof err === "string" ? err : "Failed to create branch employee";
+        sonnerToast.error(msg);
+        toast({
+          title: "Error",
+          description: msg,
+          variant: "destructive",
+        });
+      }
     }
   };
 
-  const handleEditEmployee = (updatedEmployeeData) => {
+  const handleEditEmployee = async (updatedEmployeeData) => {
     if (selectedEmployee?.id && localStorage.getItem("jwt")) {
       const data = {
         employeeId: selectedEmployee.id,
         employeeDetails: updatedEmployeeData,
         token: localStorage.getItem("jwt"),
       };
-      dispatch(updateEmployee(data));
-      setIsEditDialogOpen(false);
-      toast({
-        title: "Employee Updated",
-        description: `${updatedEmployeeData.fullName}'s details were saved.`,
-      });
+      try {
+        await dispatch(updateEmployee(data)).unwrap();
+        setIsEditDialogOpen(false);
+        sonnerToast.success(
+          `${updatedEmployeeData.fullName}'s details were saved.`,
+        );
+        toast({
+          title: "Employee Updated",
+          description: `${updatedEmployeeData.fullName}'s details were saved.`,
+        });
+      } catch (err) {
+        const msg =
+          typeof err === "string" ? err : "Failed to update branch employee";
+        sonnerToast.error(msg);
+        toast({
+          title: "Error",
+          description: msg,
+          variant: "destructive",
+        });
+      }
     }
   };
 
   useEffect(() => {
     if (branch?.id) {
       dispatch(findBranchEmployees({ branchId: branch.id }));
+      dispatch(getOrdersByBranch({ branchId: branch.id }));
     }
   }, [dispatch, branch?.id]);
 
-  const handleToggleAccess = (employee) => {
+  const handleToggleAccess = async (employee) => {
     const nextAccess = !(employee.loginAccess !== false);
-    setAccessOverrides((prev) => ({ ...prev, [employee.id]: nextAccess }));
+    if (!nextAccess && isSelfOrManager(employee)) {
+      const warningMsg =
+        "You cannot disable login access for your own account or a Branch Manager. Only a Store Admin can manage Branch Manager access.";
+      sonnerToast.error(warningMsg);
+      toast({
+        title: "Action Not Allowed",
+        description: warningMsg,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const emailKey = employee.email?.toLowerCase();
+    setAccessOverrides((prev) => {
+      const updated = {
+        ...prev,
+        [employee.id]: nextAccess,
+        ...(emailKey ? { [emailKey]: nextAccess } : {}),
+      };
+      localStorage.setItem(
+        "pos_disabled_employees_v2",
+        JSON.stringify(updated),
+      );
+      return updated;
+    });
 
     if (employee?.id && localStorage.getItem("jwt")) {
-      dispatch(
-        updateEmployee({
-          employeeId: employee.id,
-          employeeDetails: {
-            ...employee,
-            loginAccess: nextAccess,
-          },
-          token: localStorage.getItem("jwt"),
-        })
-      );
-      toast({
-        title: nextAccess ? "Login Access Enabled" : "Login Access Disabled",
-        description: `${employee.fullName}'s login access is now ${
-          nextAccess ? "enabled" : "disabled"
-        }.`,
-      });
+      try {
+        await dispatch(
+          updateEmployee({
+            employeeId: employee.id,
+            employeeDetails: {
+              ...employee,
+              loginAccess: nextAccess,
+            },
+            token: localStorage.getItem("jwt"),
+          }),
+        ).unwrap();
+        sonnerToast.success(
+          `${employee.fullName}'s login access is now ${
+            nextAccess ? "enabled" : "disabled"
+          }.`,
+        );
+        toast({
+          title: nextAccess ? "Login Access Enabled" : "Login Access Disabled",
+          description: `${employee.fullName}'s login access is now ${
+            nextAccess ? "enabled" : "disabled"
+          }.`,
+        });
+      } catch (err) {
+        setAccessOverrides((prev) => {
+          const reverted = {
+            ...prev,
+            [employee.id]: !nextAccess,
+            ...(emailKey ? { [emailKey]: !nextAccess } : {}),
+          };
+          localStorage.setItem(
+            "pos_disabled_employees_v2",
+            JSON.stringify(reverted),
+          );
+          return reverted;
+        });
+        const msg =
+          typeof err === "string"
+            ? err
+            : "Failed to update employee login access";
+        sonnerToast.error(msg);
+        toast({
+          title: "Error",
+          description: msg,
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -177,7 +302,7 @@ const BranchEmployees = () => {
         />
       </div>
 
-      <EmployeeStats employees={filteredEmployees} />
+      <EmployeeStats employees={employeesWithAccess} />
 
       <Card>
         <CardContent className="p-4">
@@ -196,6 +321,7 @@ const BranchEmployees = () => {
 
       <EmployeeTable
         employees={filteredEmployees}
+        currentUser={userProfile}
         getStatusColor={getStatusColor}
         handleToggleAccess={handleToggleAccess}
         openEditDialog={openEditDialog}

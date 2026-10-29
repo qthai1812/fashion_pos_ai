@@ -98,9 +98,9 @@ const TopProducts = () => {
                 <ChartTooltipContent
                   active={active}
                   payload={payload}
-                  formatter={(value) => [
-                    `${value}%`,
-                    "Sales Percentage"
+                  formatter={(value, _name, props) => [
+                    `${value} units (${props?.payload?.percentage?.toFixed(1) ?? 0}%)`,
+                    "Units Sold",
                   ]}
                 />
               )}

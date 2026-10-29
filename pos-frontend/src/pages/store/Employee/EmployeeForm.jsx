@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllBranchesByStore } from "@/Redux Toolkit/features/branch/branchThunks";
 import { useFormik } from "formik";
@@ -14,63 +14,78 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-  const validationSchema = Yup.object({
-    fullName: Yup.string().required("Employee name is required"),
-    email: Yup.string()
-      .email("Invalid email address")
-      .required("Email is required"),
-    phone: Yup.string().required("Phone number is required"),
-    role: Yup.string().required("Role is required"),
-    branchId: Yup.string().when("role", {
-      is: (role) => role === "ROLE_BRANCH_MANAGER" || role === "ROLE_BRANCH_CASHIER",
-      then: (schema) => schema.required("Branch is required"),
-      otherwise: (schema) => schema.notRequired(),
-    }),
-    password: Yup.string()
-      .min(8, "Password must be at least 8 characters")
-      .required("Password is required"),
-  });
-
 const EmployeeForm = ({ initialData, onSubmit, roles }) => {
   const dispatch = useDispatch();
-  const { branches } = useSelector((state) => state.branch);
+  const { branches, branch } = useSelector((state) => state.branch);
   const { store } = useSelector((state) => state.store);
 
+  const isEdit = Boolean(initialData?.id);
+  const availableBranches =
+    branches?.length > 0 ? branches : branch ? [branch] : [];
+
+  const validationSchema = useMemo(
+    () =>
+      Yup.object({
+        fullName: Yup.string().required("Employee name is required"),
+        email: Yup.string()
+          .email("Invalid email address")
+          .required("Email is required"),
+        phone: Yup.string().required("Phone number is required"),
+        role: Yup.string().required("Role is required"),
+        branchId: Yup.string().when("role", {
+          is: (role) =>
+            role === "ROLE_BRANCH_MANAGER" || role === "ROLE_BRANCH_CASHIER",
+          then: (schema) => schema.required("Branch is required"),
+          otherwise: (schema) => schema.notRequired(),
+        }),
+        password: isEdit
+          ? Yup.string()
+              .min(8, "Password must be at least 8 characters")
+              .notRequired()
+          : Yup.string()
+              .min(8, "Password must be at least 8 characters")
+              .required("Password is required"),
+      }),
+    [isEdit],
+  );
+
   useEffect(() => {
-    dispatch(
-      getAllBranchesByStore({
-        storeId: store?.id,
-        jwt: localStorage.getItem("jwt"),
-      })
-    );
+    if (store?.id) {
+      dispatch(
+        getAllBranchesByStore({
+          storeId: store.id,
+          jwt: localStorage.getItem("jwt"),
+        }),
+      );
+    }
   }, [dispatch, store?.id]);
 
-
-
-
-
   const formik = useFormik({
-    initialValues: initialData || {
-      fullName: "",
-      email: "",
-      password: "",
-      phone: "",
-      role: "",
-      branchId: initialData ? String(initialData.branchId) : "",
+    enableReinitialize: true,
+    initialValues: {
+      fullName: initialData?.fullName || "",
+      email: initialData?.email || "",
+      password: initialData?.password || "",
+      phone: initialData?.phone || "",
+      role: initialData?.role || "",
+      branchId: initialData?.branchId
+        ? String(initialData.branchId)
+        : branch?.id
+          ? String(branch.id)
+          : "",
     },
-    validationSchema: validationSchema,
+    validationSchema,
     onSubmit: (values) => {
-      onSubmit(values);
+      const payload = {
+        ...values,
+        branchId: values.branchId ? Number(values.branchId) : undefined,
+      };
+      if (isEdit && !payload.password) {
+        delete payload.password;
+      }
+      onSubmit(payload);
     },
   });
-
-  useEffect(() => {
-    if (initialData) {
-      formik.setValues(initialData);
-    } else {
-      formik.resetForm();
-    }
-  }, [initialData]);
 
   return (
     <form onSubmit={formik.handleSubmit} className="space-y-4 py-2 pr-2">
@@ -173,9 +188,9 @@ const EmployeeForm = ({ initialData, onSubmit, roles }) => {
                 <SelectValue placeholder="Select branch" />
               </SelectTrigger>
               <SelectContent>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={String(branch.id)}>
-                    {branch.name}
+                {availableBranches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -188,7 +203,7 @@ const EmployeeForm = ({ initialData, onSubmit, roles }) => {
       </div>
       <div className="flex justify-end pt-4">
         <Button type="submit" className="">
-          {initialData ? "Save Changes" : "Add Employee"}
+          {isEdit ? "Save Changes" : "Add Employee"}
         </Button>
       </div>
     </form>

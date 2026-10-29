@@ -2,7 +2,10 @@
 import { Outlet } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
-import { getStoreByAdmin } from "../../../Redux Toolkit/features/store/storeThunks";
+import {
+  getStoreByAdmin,
+  getStoreByEmployee,
+} from "../../../Redux Toolkit/features/store/storeThunks";
 import StoreSidebar from "./StoreSidebar";
 import StoreTopbar from "./StoreTopbar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -10,13 +13,18 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 export default function StoreDashboard({ children }) {
   const dispatch = useDispatch();
   const { store } = useSelector((state) => state.store);
+  const { userProfile } = useSelector((state) => state.user);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem("jwt")) {
-      dispatch(getStoreByAdmin(localStorage.getItem("jwt")));
+    if (localStorage.getItem("jwt") && !store?.id) {
+      if (userProfile?.role === "ROLE_STORE_MANAGER") {
+        dispatch(getStoreByEmployee());
+      } else {
+        dispatch(getStoreByAdmin(localStorage.getItem("jwt")));
+      }
     }
-  }, [dispatch]);
+  }, [dispatch, store?.id, userProfile?.role]);
 
   if (store?.status === "PENDING") {
     return (
@@ -51,7 +59,7 @@ export default function StoreDashboard({ children }) {
 
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="p-0 w-64 border-r-0">
-          <StoreSidebar />
+          <StoreSidebar onNavigate={() => setMobileMenuOpen(false)} />
         </SheetContent>
       </Sheet>
 

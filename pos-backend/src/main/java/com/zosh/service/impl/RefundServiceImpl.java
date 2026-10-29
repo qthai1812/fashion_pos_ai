@@ -1,5 +1,6 @@
 package com.zosh.service.impl;
 
+import com.zosh.domain.OrderStatus;
 import com.zosh.mapper.RefundMapper;
 import com.zosh.modal.*;
 import com.zosh.payload.dto.RefundDTO;
@@ -41,7 +42,19 @@ public class RefundServiceImpl implements RefundService {
                 () -> new Exception("Order not found with id: " + refund.getOrderId())
         );
 
-        if (refundRepository.existsByOrderId(refund.getOrderId()) || order.getStatus() == com.zosh.domain.OrderStatus.REFUNDED) {
+        if (order.getStatus() == OrderStatus.REFUNDED) {
+            throw new Exception("This order has already been fully refunded");
+        }
+
+        List<Refund> existingRefunds = refundRepository.findByOrderId(order.getId());
+        double alreadyRefunded = existingRefunds.stream()
+                .mapToDouble(r -> r.getAmount() != null ? r.getAmount() : 0.0)
+                .sum();
+
+        double orderTotal = order.getTotalAmount() != null ? order.getTotalAmount() : 0.0;
+        double remainingRefundable = Math.max(0.0, orderTotal - alreadyRefunded);
+
+        if (remainingRefundable < 0.01) {
             throw new Exception("This order has already been refunded");
         }
 
@@ -49,26 +62,27 @@ public class RefundServiceImpl implements RefundService {
         com.zosh.domain.PaymentType paymentType =
                 refund.getPaymentType() != null ? refund.getPaymentType() : order.getPaymentType();
 
-        double orderTotal = order.getTotalAmount() != null ? order.getTotalAmount() : 0.0;
         double refundAmount = (refund.getAmount() != null && refund.getAmount() > 0)
                 ? refund.getAmount()
-                : orderTotal;
+                : remainingRefundable;
 
         if (refundAmount <= 0) {
             throw new IllegalArgumentException("Refund amount must be greater than 0");
         }
-        if (refundAmount > orderTotal) {
+        if (alreadyRefunded + refundAmount > orderTotal + 0.01) {
             throw new Exception(
-                    "Refund amount (" + refundAmount + ") exceeds order total (" + orderTotal + ")");
+                    "Refund amount (" + refundAmount + ") exceeds remaining refundable order total (" + remainingRefundable + ")");
         }
 
-        boolean isFullRefund = Math.abs(refundAmount - orderTotal) < 0.01;
+        double totalRefundedAfter = alreadyRefunded + refundAmount;
+        boolean isFullRefund = totalRefundedAfter >= orderTotal - 0.01;
         if (isFullRefund) {
-            order.setStatus(com.zosh.domain.OrderStatus.REFUNDED);
+            order.setStatus(OrderStatus.REFUNDED);
             orderRepository.save(order);
 
-            if (order.getItems() != null && !order.getItems().isEmpty()) {
+            if (order.getItems() != null && !order.getItems().isEmpty() && branch != null) {
                 List<OrderItem> sortedItems = order.getItems().stream()
+                        .filter(i -> i.getProduct() != null && i.getProduct().getId() != null)
                         .sorted(Comparator.comparing(i -> i.getProduct().getId()))
                         .collect(Collectors.toList());
 
@@ -104,10 +118,7 @@ public class RefundServiceImpl implements RefundService {
                     .orElse(order.getCustomer());
             int currentPoints = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
 
-            int originalEarnedPoints = (int) Math.floor(orderTotal / 10000.0);
-            int pointsToDeduct = isFullRefund
-                    ? originalEarnedPoints
-                    : (int) Math.floor(refundAmount / 10000.0);
+            int pointsToDeduct = (int) Math.floor(refundAmount / 10000.0);
 
             int pointsToRestore = 0;
             if (isFullRefund && order.getCouponCode() != null && order.getCouponCode().startsWith("POINTS")) {

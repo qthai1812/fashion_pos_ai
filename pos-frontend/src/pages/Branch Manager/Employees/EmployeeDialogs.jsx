@@ -1,4 +1,5 @@
 import React from "react";
+import { useSelector } from "react-redux";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmployeeForm } from "../../store/Employee";
 import { Plus, Download } from "lucide-react";
 
@@ -111,6 +112,20 @@ export const PerformanceDialog = ({
   setIsPerformanceDialogOpen,
   selectedEmployee,
 }) => {
+  const { orders = [] } = useSelector((state) => state.order || {});
+  const employeeOrders = (orders || []).filter(
+    (o) =>
+      o.cashierId === selectedEmployee?.id ||
+      o.cashier?.id === selectedEmployee?.id,
+  );
+  const ordersProcessed = employeeOrders.length;
+  const totalSales = employeeOrders.reduce(
+    (sum, o) => sum + (Number(o.totalAmount) || 0),
+    0,
+  );
+  const avgOrderValue =
+    ordersProcessed > 0 ? Math.round(totalSales / ordersProcessed) : 0;
+
   const handleExportEmployeeReport = () => {
     if (!selectedEmployee) return;
     const empName =
@@ -119,8 +134,9 @@ export const PerformanceDialog = ({
       "data:text/csv;charset=utf-8," +
       [
         "Employee ID,Full Name,Email,Role,Metric,Value",
-        `${selectedEmployee.id},"${empName}","${selectedEmployee.email}","${selectedEmployee.role}","Orders Processed (30d)",127`,
-        `${selectedEmployee.id},"${empName}","${selectedEmployee.email}","${selectedEmployee.role}","Total Sales (30d)",78450`,
+        `${selectedEmployee.id},"${empName}","${selectedEmployee.email}","${selectedEmployee.role}","Orders Processed (30d)",${ordersProcessed}`,
+        `${selectedEmployee.id},"${empName}","${selectedEmployee.email}","${selectedEmployee.role}","Total Sales (30d)",${totalSales}`,
+        `${selectedEmployee.id},"${empName}","${selectedEmployee.email}","${selectedEmployee.role}","Avg. Order Value (30d)",${avgOrderValue}`,
       ].join("\n");
     const link = document.createElement("a");
     link.setAttribute("href", encodeURI(csvContent));
@@ -150,7 +166,7 @@ export const PerformanceDialog = ({
                   <h3 className="text-sm font-medium text-gray-500">
                     Orders Processed
                   </h3>
-                  <p className="text-3xl font-bold mt-2">127</p>
+                  <p className="text-3xl font-bold mt-2">{ordersProcessed}</p>
                   <p className="text-xs text-gray-500 mt-1">Last 30 days</p>
                 </CardContent>
               </Card>
@@ -159,7 +175,9 @@ export const PerformanceDialog = ({
                   <h3 className="text-sm font-medium text-gray-500">
                     Total Sales
                   </h3>
-                  <p className="text-3xl font-bold mt-2">đ78,450</p>
+                  <p className="text-3xl font-bold mt-2">
+                    đ{totalSales.toLocaleString()}
+                  </p>
                   <p className="text-xs text-gray-500 mt-1">Last 30 days</p>
                 </CardContent>
               </Card>
@@ -168,7 +186,9 @@ export const PerformanceDialog = ({
                   <h3 className="text-sm font-medium text-gray-500">
                     Avg. Order Value
                   </h3>
-                  <p className="text-3xl font-bold mt-2">đ617</p>
+                  <p className="text-3xl font-bold mt-2">
+                    đ{avgOrderValue.toLocaleString()}
+                  </p>
                   <p className="text-xs text-gray-500 mt-1">Last 30 days</p>
                 </CardContent>
               </Card>

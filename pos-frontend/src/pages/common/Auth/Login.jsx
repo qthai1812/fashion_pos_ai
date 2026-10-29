@@ -55,7 +55,7 @@ const Login = () => {
         })
 
         const user = resultAction.payload.user
-        dispatch(getUserProfile(resultAction.payload.jwt))
+        await dispatch(getUserProfile(resultAction.payload.jwt))
 
         // Redirect based on user role (including ROLE_ADMIN for Super Admin)
         const userRole = user?.role
@@ -250,6 +250,16 @@ const Login = () => {
                 <div className="relative flex justify-center text-sm">
                   <span className="px-2 bg-card text-muted-foreground">Or continue with</span>
                 </div>
+              </div>
+              <div className="mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate('/auth/onboarding')}
+                >
+                  Create a new Store Account (Onboarding)
+                </Button>
               </div>
             </div>
 

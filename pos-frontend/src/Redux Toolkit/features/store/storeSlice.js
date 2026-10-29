@@ -51,6 +51,9 @@ const storeSlice = createSlice({
       })
       .addCase(updateStore.fulfilled, (state, action) => {
         state.store = action.payload;
+        state.stores = state.stores.map((store) =>
+          store.id === action.payload.id ? action.payload : store,
+        );
       })
       .addCase(deleteStore.fulfilled, (state) => {
         state.store = null;

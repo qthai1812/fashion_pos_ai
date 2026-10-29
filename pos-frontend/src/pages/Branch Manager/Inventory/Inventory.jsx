@@ -199,7 +199,7 @@ const Inventory = () => {
         title: "CSV Import Completed",
         description: `Successfully imported ${importedCount} inventory records.`,
       });
-    } catch (err) {
+    } catch {
       toast({
         title: "CSV Import Error",
         description:

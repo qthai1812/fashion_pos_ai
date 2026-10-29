@@ -15,6 +15,7 @@ public class RefundMapper {
                 .reason(refund.getReason())
                 .amount(refund.getAmount())
                 .paymentType(refund.getPaymentType())
+                .cashier(refund.getCashier() != null ? UserMapper.toDTO(refund.getCashier()) : null)
                 .cashierName(refund.getCashier() != null ? refund.getCashier().getFullName() : null)
                 .branchId(refund.getBranch() != null ? refund.getBranch().getId() : null)
                 .shiftReportId(refund.getShiftReport() != null ? refund.getShiftReport().getId() : null)
