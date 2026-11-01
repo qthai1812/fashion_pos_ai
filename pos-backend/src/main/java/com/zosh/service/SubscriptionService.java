@@ -2,6 +2,7 @@ package com.zosh.service;
 
 import com.zosh.domain.PaymentGateway;
 import com.zosh.domain.SubscriptionStatus;
+import com.zosh.payload.dto.PlanEntitlementsDTO;
 import com.zosh.payload.dto.SubscriptionDTO;
 
 import java.util.List;
@@ -16,4 +17,7 @@ public interface SubscriptionService {
     List<SubscriptionDTO> getAllSubscriptions(SubscriptionStatus status) throws Exception;
     List<SubscriptionDTO> getExpiringSubscriptions(int days) throws Exception;
     long countByStatus(SubscriptionStatus status) throws Exception;
+    int expireOverdueSubscriptions();
+    /** Quyền lợi (giới hạn, mức đã dùng, tính năng) của cửa hàng mà người dùng hiện tại thuộc về. */
+    PlanEntitlementsDTO getMyEntitlements() throws Exception;
 }

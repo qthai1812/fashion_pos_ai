@@ -2,6 +2,7 @@ package com.zosh.payload.dto;
 
 import com.zosh.domain.StoreStatus;
 import com.zosh.modal.StoreContact;
+import com.zosh.modal.StorePaymentInfo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -26,4 +27,6 @@ public class StoreDTO {
     private Double commissionRate;
 
     private StoreContact contact;
+
+    private StorePaymentInfo paymentInfo;
 }

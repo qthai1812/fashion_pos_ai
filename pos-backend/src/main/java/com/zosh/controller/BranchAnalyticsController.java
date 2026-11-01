@@ -39,7 +39,7 @@ public class BranchAnalyticsController {
     @GetMapping("/category-sales")
     public ResponseEntity<List<CategorySalesDTO>> getCategoryWiseSalesBreakdown(
             @RequestParam Long branchId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) throws Exception {
         LocalDate targetDate = date != null ? date : LocalDate.now();
         return ResponseEntity.ok(branchAnalyticsService.getCategoryWiseSalesBreakdown(branchId, targetDate));
     }

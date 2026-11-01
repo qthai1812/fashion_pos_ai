@@ -48,11 +48,15 @@ export default function Settings() {
 
   const [paymentSettings, setPaymentSettings] = useState({
     acceptCash: true,
-    acceptCredit: true,
-    acceptDebit: true,
-    acceptMobile: true,
-    stripeEnabled: false,
-    paypalEnabled: false,
+    acceptMomo: true,
+    acceptCard: true,
+    momoPhone: "",
+    momoOwnerName: "",
+    momoQrImage: "",
+    cardBankName: "",
+    cardNumber: "",
+    cardHolderName: "",
+    cardExpiry: "",
   });
 
   const [activeSection, setActiveSection] = useState("store-settings");
@@ -66,7 +70,8 @@ export default function Settings() {
           setNotificationSettings(parsed.notificationSettings);
         if (parsed.securitySettings)
           setSecuritySettings(parsed.securitySettings);
-        if (parsed.paymentSettings) setPaymentSettings(parsed.paymentSettings);
+        if (parsed.paymentSettings)
+          setPaymentSettings((prev) => ({ ...prev, ...parsed.paymentSettings }));
       } catch {
         // Ignore invalid JSON in localStorage
       }
@@ -105,6 +110,22 @@ export default function Settings() {
         dateFormat: store.dateFormat || "DD/MM/YYYY",
         receiptFooter: store.receiptFooter || "Cảm ơn quý khách đã mua hàng!",
       });
+
+      if (store.paymentInfo) {
+        setPaymentSettings((prev) => ({
+          ...prev,
+          acceptCash: store.paymentInfo.acceptCash ?? true,
+          acceptMomo: store.paymentInfo.acceptMomo ?? true,
+          acceptCard: store.paymentInfo.acceptCard ?? true,
+          momoPhone: store.paymentInfo.momoPhone || "",
+          momoOwnerName: store.paymentInfo.momoOwnerName || "",
+          momoQrImage: store.paymentInfo.momoQrImage || "",
+          cardBankName: store.paymentInfo.cardBankName || "",
+          cardNumber: store.paymentInfo.cardNumber || "",
+          cardHolderName: store.paymentInfo.cardHolderName || "",
+          cardExpiry: store.paymentInfo.cardExpiry || "",
+        }));
+      }
     }
   }, [store]);
 
@@ -148,13 +169,25 @@ export default function Settings() {
                 phone: storeSettings.storePhone,
                 address: storeSettings.storeAddress,
               },
+              paymentInfo: {
+                acceptCash: paymentSettings.acceptCash,
+                acceptMomo: paymentSettings.acceptMomo,
+                acceptCard: paymentSettings.acceptCard,
+                momoPhone: paymentSettings.momoPhone?.trim() || "",
+                momoOwnerName: paymentSettings.momoOwnerName?.trim() || "",
+                momoQrImage: paymentSettings.momoQrImage?.trim() || "",
+                cardBankName: paymentSettings.cardBankName?.trim() || "",
+                cardNumber: paymentSettings.cardNumber?.trim() || "",
+                cardHolderName: paymentSettings.cardHolderName?.trim() || "",
+                cardExpiry: paymentSettings.cardExpiry?.trim() || "",
+              },
             },
           }),
         ).unwrap();
       } catch (err) {
         toast({
-          title: "Error Saving Store Profile",
-          description: err || "Could not update store profile on server.",
+          title: "Lỗi lưu cấu hình cửa hàng",
+          description: err || "Không thể cập nhật thông tin lên máy chủ.",
           variant: "destructive",
         });
         return;
@@ -162,9 +195,9 @@ export default function Settings() {
     }
 
     toast({
-      title: "All Settings Saved",
+      title: "Đã lưu cấu hình thành công!",
       description:
-        "Store profile, notifications, security, and payment settings have been saved.",
+        "Thông tin cửa hàng và tài khoản nhận tiền (MoMo QR / Thẻ Visa) đã được đồng bộ cho mọi quầy thu ngân.",
     });
   };
 

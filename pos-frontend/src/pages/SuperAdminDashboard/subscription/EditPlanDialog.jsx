@@ -27,15 +27,44 @@ const BILLING_CYCLES = [
   { label: "Yearly", value: "YEARLY" },
 ];
 
-// Synchronized 100% with Backend SubscriptionPlanDTO.java
+// Synchronized 100% with Backend SubscriptionPlanDTO.java / PlanFeature.java
+// Tính năng cố định của gói; `hint` mô tả đúng phần hệ thống bị giới hạn khi tắt tính năng.
 const FEATURE_FIELDS = [
-  { key: "advancedReports", label: "Advanced Reports" },
-  { key: "inventory", label: "Inventory System" },
-  { key: "integrations", label: "Integrations" },
-  { key: "ecommerce", label: "eCommerce" },
-  { key: "invoiceBranding", label: "Invoice Branding" },
-  { key: "prioritySupport", label: "Priority Support" },
-  { key: "multiLocation", label: "Multi-location" },
+  {
+    key: "advancedReports",
+    label: "Advanced Reports",
+    hint: "Reports & Analytics pages",
+  },
+  {
+    key: "inventory",
+    label: "Inventory System",
+    hint: "Branch stock management & stock tracking at POS",
+  },
+  {
+    key: "integrations",
+    label: "Integrations",
+    hint: "Plan label only (no module yet)",
+  },
+  {
+    key: "ecommerce",
+    label: "eCommerce",
+    hint: "Plan label only (no module yet)",
+  },
+  {
+    key: "invoiceBranding",
+    label: "Invoice Branding",
+    hint: "Store name on invoice PDF",
+  },
+  {
+    key: "prioritySupport",
+    label: "Priority Support",
+    hint: "Plan label only (no module yet)",
+  },
+  {
+    key: "multiLocation",
+    label: "Multi-location",
+    hint: "More than 1 branch per store",
+  },
 ];
 
 const validationSchema = Yup.object().shape({
@@ -82,51 +111,15 @@ const FeaturesSwitchGrid = memo(({ handleFeatureSwitch }) => (
             />
           )}
         </Field>
-        <span className="text-sm">{f.label}</span>
+        <span className="text-sm leading-tight">
+          {f.label}
+          <span className="block text-[11px] text-muted-foreground">{f.hint}</span>
+        </span>
       </label>
     ))}
   </div>
 ));
 FeaturesSwitchGrid.displayName = "FeaturesSwitchGrid";
-
-const ExtraFeaturesList = memo(
-  ({
-    values,
-    handleExtraFeatureChange,
-    handleRemoveExtraFeature,
-    handleAddExtraFeature,
-  }) => (
-    <>
-      {(values.extraFeatures || []).map((feature, idx) => (
-        <div key={idx} className="flex gap-2 mb-1">
-          <Input
-            value={feature}
-            onChange={(e) => handleExtraFeatureChange(idx, e.target.value)}
-            placeholder="Extra feature"
-            aria-label={`Extra feature ${idx + 1}`}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => handleRemoveExtraFeature(idx)}
-            disabled={values.extraFeatures.length === 1}
-          >
-            Remove
-          </Button>
-        </div>
-      ))}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={handleAddExtraFeature}
-      >
-        + Add Feature
-      </Button>
-    </>
-  )
-);
-ExtraFeaturesList.displayName = "ExtraFeaturesList";
 
 const getInitialValues = (plan) => {
   if (!plan) return null;
@@ -146,10 +139,6 @@ const getInitialValues = (plan) => {
     invoiceBranding: plan.invoiceBranding ?? plan.enableInvoiceBranding ?? false,
     prioritySupport: plan.prioritySupport ?? false,
     multiLocation: plan.multiLocation ?? plan.enableMultiLocation ?? false,
-    extraFeatures:
-      plan.extraFeatures && plan.extraFeatures.length > 0
-        ? plan.extraFeatures
-        : [""],
   };
 };
 
@@ -168,7 +157,6 @@ const EditPlanDialog = ({ open, onOpenChange, plan, onSuccess }) => {
         maxBranches: Number(values.maxBranches),
         maxUsers: Number(values.maxUsers),
         maxProducts: Number(values.maxProducts),
-        extraFeatures: (values.extraFeatures || []).filter((f) => f.trim()),
       };
       const res = await dispatch(
         updateSubscriptionPlan({ id: plan.id, plan: payload })
@@ -187,18 +175,6 @@ const EditPlanDialog = ({ open, onOpenChange, plan, onSuccess }) => {
   const renderForm = ({ values, isSubmitting, errors, setFieldValue }) => {
     const handleFeatureSwitch = (key, val) => {
       setFieldValue(key, val);
-    };
-    const handleExtraFeatureChange = (idx, value) => {
-      const arr = [...values.extraFeatures];
-      arr[idx] = value;
-      setFieldValue("extraFeatures", arr);
-    };
-    const handleRemoveExtraFeature = (idx) => {
-      const arr = values.extraFeatures.filter((_, i) => i !== idx);
-      setFieldValue("extraFeatures", arr.length ? arr : [""]);
-    };
-    const handleAddExtraFeature = () => {
-      setFieldValue("extraFeatures", [...values.extraFeatures, ""]);
     };
     return (
       <Form className="space-y-4">
@@ -341,16 +317,10 @@ const EditPlanDialog = ({ open, onOpenChange, plan, onSuccess }) => {
         </div>
         <div>
           <label className="block font-medium mb-2">Features</label>
+          <p className="text-xs text-muted-foreground mb-2">
+            Fixed features. Turning one off blocks exactly that part of the system for stores on this plan.
+          </p>
           <FeaturesSwitchGrid handleFeatureSwitch={handleFeatureSwitch} />
-        </div>
-        <div>
-          <label className="block font-medium mb-1">Extra Features</label>
-          <ExtraFeaturesList
-            values={values}
-            handleExtraFeatureChange={handleExtraFeatureChange}
-            handleRemoveExtraFeature={handleRemoveExtraFeature}
-            handleAddExtraFeature={handleAddExtraFeature}
-          />
         </div>
         {errors.submit && (
           <div className="text-red-500 text-xs">{errors.submit}</div>

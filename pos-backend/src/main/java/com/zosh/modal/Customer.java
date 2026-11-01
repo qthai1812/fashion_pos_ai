@@ -1,5 +1,6 @@
 package com.zosh.modal;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,6 +12,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@Table(
+        indexes = {
+                @Index(name = "idx_customer_store", columnList = "store_id")
+        }
+)
 public class Customer {
 
     @Id
@@ -26,6 +32,18 @@ public class Customer {
 
     @Builder.Default
     private Integer loyaltyPoints = 0;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id")
+    @JsonIgnore
+    private Store store;
+
+    @Transient
+    private Long storeId;
+
+    public Long getStoreId() {
+        return store != null ? store.getId() : storeId;
+    }
 
     private LocalDateTime createdAt;
 

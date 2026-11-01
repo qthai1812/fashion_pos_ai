@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/api/media/download/**").permitAll()
+                        .requestMatchers("/api/payment-gateway/**").permitAll()
                         // Cho phép Store Admin đã đăng nhập xem danh sách gói cước ở trang Upgrade
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/super-admin/subscription-plans/**").authenticated()
                         .requestMatchers("/api/super-admin/**").hasRole("ADMIN")
@@ -79,9 +80,10 @@ public class SecurityConfig {
     private CorsConfigurationSource corsConfigurationSource() {
         return request -> {
             CorsConfiguration cfg = new CorsConfiguration();
-            cfg.setAllowedOrigins(Arrays.asList(
-                    "http://localhost:5173",
-                    "http://localhost:3000"
+            cfg.setAllowedOriginPatterns(Arrays.asList(
+                    "http://localhost:*",
+                    "http://127.0.0.1:*",
+                    "http://192.168.*:*"
             ));
             cfg.setAllowedMethods(Collections.singletonList("*"));
             cfg.setAllowCredentials(true);

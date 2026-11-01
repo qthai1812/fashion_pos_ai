@@ -9,6 +9,7 @@ import com.zosh.modal.*;
 import com.zosh.payload.dto.OrderDTO;
 import com.zosh.payload.dto.OrderItemDTO;
 import com.zosh.repository.*;
+import com.zosh.service.AccessControlService;
 import com.zosh.service.InventoryService;
 import com.zosh.service.OrderService;
 import com.zosh.service.UserService;
@@ -24,6 +25,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -40,14 +43,79 @@ public class OrderServiceImpl implements OrderService {
     private final CustomerRepository customerRepository;
     private final InventoryService inventoryService;
     private final RefundRepository refundRepository;
+    private final ShiftReportRepository shiftReportRepository;
+    private final AccessControlService accessControl;
 
     private static final double VND_PER_POINT_EARNED = 10000.0;
     private static final double VND_PER_POINT_REDEEMED = 1000.0;
+    private static final Pattern POINTS_USED_PATTERN = Pattern.compile("-(\\d+)\\s*pts");
+
+    /** Số điểm đã dùng để giảm giá trong đơn (được ghi trong couponCode dạng "POINTS (-N pts)"). */
+    private int extractPointsUsed(Order order) {
+        if (order.getCouponCode() == null || !order.getCouponCode().startsWith("POINTS")) {
+            return 0;
+        }
+        Matcher matcher = POINTS_USED_PATTERN.matcher(order.getCouponCode());
+        return matcher.find() ? Integer.parseInt(matcher.group(1)) : 0;
+    }
+
+    /** Hoàn lại điểm đã dùng và thu hồi điểm đã tích khi đơn bị hủy/xóa. */
+    private void revertCustomerLoyalty(Order order) {
+        if (order.getCustomer() == null) {
+            return;
+        }
+        Customer customer = customerRepository.findByIdWithLock(order.getCustomer().getId())
+                .orElse(order.getCustomer());
+        int currentPoints = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
+        int earned = (int) Math.floor((order.getTotalAmount() != null ? order.getTotalAmount() : 0.0) / VND_PER_POINT_EARNED);
+        int used = extractPointsUsed(order);
+        int updated = Math.max(0, currentPoints + used - earned);
+        if (updated != currentPoints) {
+            customer.setLoyaltyPoints(updated);
+            customerRepository.save(customer);
+        }
+    }
+
+    private void restoreOrderInventory(Order order) {
+        if (order.getBranch() == null || order.getItems() == null) {
+            return;
+        }
+        List<OrderItem> sortedItems = order.getItems().stream()
+                .filter(i -> i.getProduct() != null && i.getProduct().getId() != null)
+                .sorted(Comparator.comparing(i -> i.getProduct().getId()))
+                .collect(Collectors.toList());
+        for (OrderItem item : sortedItems) {
+            try {
+                inventoryService.restoreInventory(
+                        item.getProduct().getId(),
+                        order.getBranch().getId(),
+                        item.getQuantity()
+                );
+            } catch (Exception e) {
+                log.warn("Could not restore inventory for product {} of order {}: {}",
+                        item.getProduct().getId(), order.getId(), e.getMessage());
+            }
+        }
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderDTO createOrder(OrderDTO orderDTO) throws Exception {
         User cashier = userService.getCurrentUser();
+
+        // Thu ngân bắt buộc phải mở ca làm việc trước khi tạo đơn hàng tại quầy POS
+        if (cashier.getRole() == UserRole.ROLE_BRANCH_CASHIER) {
+            boolean hasActiveShift = shiftReportRepository
+                    .findTopByCashierAndShiftEndIsNullOrderByShiftStartDesc(cashier)
+                    .isPresent();
+            if (!hasActiveShift) {
+                throw new Exception("Vui lòng bắt đầu ca làm việc (Start Shift) trước khi tạo đơn hàng.");
+            }
+        }
+
+        if (orderDTO.getStatus() == OrderStatus.REFUNDED || orderDTO.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalArgumentException("A new order cannot be created with status " + orderDTO.getStatus());
+        }
 
         Branch branch;
         if (cashier.getBranch() != null) {
@@ -92,7 +160,15 @@ public class OrderServiceImpl implements OrderService {
                 ? orderDTO.getCustomerId()
                 : (orderDTO.getCustomer() != null ? orderDTO.getCustomer().getId() : null);
         if (reqCustomerId != null) {
-            customer = customerRepository.findByIdWithLock(reqCustomerId).orElse(null);
+            customer = customerRepository.findByIdWithLock(reqCustomerId)
+                    .orElseThrow(() -> new Exception("Customer not found with id: " + reqCustomerId));
+            if (customer.getStore() != null && branch.getStore() != null
+                    && !customer.getStore().getId().equals(branch.getStore().getId())) {
+                throw new IllegalArgumentException("Customer does not belong to this store");
+            }
+            if (customer.getStore() == null && branch.getStore() != null) {
+                customer.setStore(branch.getStore());
+            }
         }
 
         final Branch finalBranch = branch;
@@ -247,9 +323,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public OrderDTO getOrderById(Long id) throws Exception {
-        return orderRepository.findById(id)
-                .map(OrderMapper::toDTO)
+        Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new Exception("Order not found with id " + id));
+        accessControl.assertCanAccessBranch(userService.getCurrentUser(), order.getBranch());
+        return OrderMapper.toDTO(order);
     }
 
     @Override
@@ -261,6 +338,28 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id).orElseThrow(
                 () -> new Exception("Order not found with id " + id)
         );
+        accessControl.assertCanManageBranch(userService.getCurrentUser(), order.getBranch());
+
+        OrderStatus current = order.getStatus();
+        if (current == status) {
+            return OrderMapper.toDTO(order);
+        }
+        if (current == OrderStatus.REFUNDED || current == OrderStatus.CANCELLED) {
+            throw new IllegalStateException("Order is already " + current + " and its status can no longer be changed");
+        }
+        if (status == OrderStatus.REFUNDED) {
+            throw new IllegalArgumentException("Use the refund function to refund an order");
+        }
+
+        if (status == OrderStatus.CANCELLED) {
+            if (!refundRepository.findByOrderId(order.getId()).isEmpty()) {
+                throw new IllegalStateException("This order already has refunds. Please refund the remaining amount instead of cancelling it");
+            }
+            // Hủy đơn: trả hàng về kho và thu hồi/hoàn điểm tích lũy
+            restoreOrderInventory(order);
+            revertCustomerLoyalty(order);
+        }
+
         order.setStatus(status);
         Order saved = orderRepository.save(order);
         return OrderMapper.toDTO(saved);
@@ -273,6 +372,7 @@ public class OrderServiceImpl implements OrderService {
                                             Long cashierId,
                                             PaymentType paymentType,
                                             OrderStatus status) throws Exception {
+        assertBranchAccessById(branchId);
         return orderRepository.findByBranchId(branchId).stream()
                 .filter(order -> customerId == null ||
                         (order.getCustomer() != null &&
@@ -288,9 +388,24 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
     }
 
+    private void assertBranchAccessById(Long branchId) throws Exception {
+        Branch branch = branchRepository.findById(branchId)
+                .orElseThrow(() -> new Exception("Branch not found with id: " + branchId));
+        accessControl.assertCanAccessBranch(userService.getCurrentUser(), branch);
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public List<OrderDTO> getOrderByCashier(Long cashierId) {
+    public List<OrderDTO> getOrderByCashier(Long cashierId) throws Exception {
+        User current = userService.getCurrentUser();
+        if (!current.getId().equals(cashierId)) {
+            User target = userService.getUserById(cashierId);
+            if (target.getBranch() != null) {
+                accessControl.assertCanManageBranch(current, target.getBranch());
+            } else if (!accessControl.isStoreLevelUser(current, target.getStore())) {
+                throw new Exception("You do not have permission to view orders of this cashier");
+            }
+        }
         return orderRepository.findByCashierId(cashierId).stream()
                 .map(OrderMapper::toDTO)
                 .collect(Collectors.toList());
@@ -302,6 +417,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id).orElseThrow(
                 () -> new Exception("Order not found with id " + id)
         );
+        accessControl.assertCanManageBranch(userService.getCurrentUser(), order.getBranch());
 
         List<Refund> orderRefunds = refundRepository.findByOrderId(id);
         for (Refund r : orderRefunds) {
@@ -309,24 +425,13 @@ public class OrderServiceImpl implements OrderService {
             refundRepository.save(r);
         }
 
-        if (order.getStatus() != OrderStatus.REFUNDED
-                && order.getBranch() != null
-                && order.getItems() != null) {
-            List<OrderItem> sortedItems = order.getItems().stream()
-                    .filter(i -> i.getProduct() != null && i.getProduct().getId() != null)
-                    .sorted(Comparator.comparing(i -> i.getProduct().getId()))
-                    .collect(Collectors.toList());
-            for (OrderItem item : sortedItems) {
-                try {
-                    inventoryService.restoreInventory(
-                            item.getProduct().getId(),
-                            order.getBranch().getId(),
-                            item.getQuantity()
-                    );
-                } catch (Exception e) {
-                    log.warn("Could not restore inventory for product {} when deleting order {}: {}",
-                            item.getProduct().getId(), id, e.getMessage());
-                }
+        // Đơn REFUNDED đã hoàn kho khi hoàn tiền, đơn CANCELLED đã hoàn kho khi hủy -> không hoàn lần nữa
+        boolean stockAlreadyRestored = order.getStatus() == OrderStatus.REFUNDED
+                || order.getStatus() == OrderStatus.CANCELLED;
+        if (!stockAlreadyRestored) {
+            restoreOrderInventory(order);
+            if (orderRefunds.isEmpty()) {
+                revertCustomerLoyalty(order);
             }
         }
 
@@ -336,6 +441,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public List<OrderDTO> getTodayOrdersByBranch(Long branchId) throws Exception {
+        assertBranchAccessById(branchId);
         LocalDate today = LocalDate.now();
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = today.plusDays(1).atStartOfDay();
@@ -349,7 +455,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public List<OrderDTO> getOrdersByCustomerId(Long customerId) throws Exception {
+        User current = userService.getCurrentUser();
         return orderRepository.findByCustomerId(customerId).stream()
+                .filter(o -> accessControl.canAccessBranch(current, o.getBranch()))
                 .map(OrderMapper::toDTO)
                 .collect(Collectors.toList());
     }
@@ -357,6 +465,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     public List<OrderDTO> getTop5RecentOrdersByBranchId(Long branchId) throws Exception {
+        assertBranchAccessById(branchId);
         return orderRepository.findTop5ByBranchIdOrderByCreatedAtDesc(branchId).stream()
                 .map(OrderMapper::toDTO)
                 .collect(Collectors.toList());

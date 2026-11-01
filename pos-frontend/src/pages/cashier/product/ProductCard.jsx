@@ -8,18 +8,18 @@ import {
   selectCartItems,
 } from "../../../Redux Toolkit/features/cart/cartSlice";
 
-const ProductCard = ({ product, stockQuantity = 0 }) => {
+const ProductCard = ({ product, stockQuantity = 0, trackStock = true }) => {
   const dispatch = useDispatch();
   const { toast } = useToast();
   const cartItems = useSelector(selectCartItems);
 
   const cartItem = cartItems.find((item) => item.id === product.id);
   const inCartQty = cartItem?.quantity || 0;
-  const totalStock = Number(stockQuantity ?? 0);
+  const totalStock = trackStock ? Number(stockQuantity ?? 0) : Infinity;
   const remainingStock = Math.max(0, totalStock - inCartQty);
 
-  const isOutOfStock = totalStock <= 0;
-  const isMaxReached = totalStock > 0 && remainingStock <= 0;
+  const isOutOfStock = trackStock && totalStock <= 0;
+  const isMaxReached = trackStock && totalStock > 0 && remainingStock <= 0;
   const isDisabled = isOutOfStock || isMaxReached;
 
   const handleAddToCart = () => {
@@ -28,12 +28,14 @@ const ProductCard = ({ product, stockQuantity = 0 }) => {
     dispatch(
       addToCart({
         ...product,
-        maxStock: totalStock,
+        maxStock: trackStock ? totalStock : undefined,
       }),
     );
     toast({
       title: "Added to cart",
-      description: `${product.name} added to cart (Còn lại: ${remainingStock - 1})`,
+      description: trackStock
+        ? `${product.name} added to cart (Còn lại: ${remainingStock - 1})`
+        : `${product.name} added to cart`,
       duration: 1500,
     });
   };
@@ -73,7 +75,7 @@ const ProductCard = ({ product, stockQuantity = 0 }) => {
                 Đã chọn tối đa ({totalStock})
               </span>
             </div>
-          ) : (
+          ) : !trackStock ? null : (
             <span
               className={`absolute top-1.5 right-1.5 text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded-full shadow-xs ${
                 remainingStock <= 10

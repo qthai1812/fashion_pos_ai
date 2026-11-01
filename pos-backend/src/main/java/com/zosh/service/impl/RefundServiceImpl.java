@@ -8,6 +8,7 @@ import com.zosh.repository.CustomerRepository;
 import com.zosh.repository.OrderRepository;
 import com.zosh.repository.RefundRepository;
 import com.zosh.repository.ShiftReportRepository;
+import com.zosh.service.AccessControlService;
 import com.zosh.service.InventoryService;
 import com.zosh.service.RefundService;
 import com.zosh.service.UserService;
@@ -32,6 +33,9 @@ public class RefundServiceImpl implements RefundService {
     private final ShiftReportRepository shiftReportRepository;
     private final InventoryService inventoryService;
     private final CustomerRepository customerRepository;
+    private final AccessControlService accessControl;
+
+    private static final double VND_PER_POINT_EARNED = 10000.0;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -41,7 +45,11 @@ public class RefundServiceImpl implements RefundService {
         Order order = orderRepository.findById(refund.getOrderId()).orElseThrow(
                 () -> new Exception("Order not found with id: " + refund.getOrderId())
         );
+        accessControl.assertCanAccessBranch(cashier, order.getBranch());
 
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new Exception("A cancelled order cannot be refunded");
+        }
         if (order.getStatus() == OrderStatus.REFUNDED) {
             throw new Exception("This order has already been fully refunded");
         }
@@ -100,6 +108,9 @@ public class RefundServiceImpl implements RefundService {
         ShiftReport activeShift = shiftReportRepository
                 .findTopByCashierAndShiftEndIsNullOrderByShiftStartDesc(cashier)
                 .orElse(null);
+        if (cashier.getRole() == com.zosh.domain.UserRole.ROLE_BRANCH_CASHIER && activeShift == null) {
+            throw new Exception("Vui lòng bắt đầu ca làm việc (Start Shift) trước khi thực hiện hoàn tiền.");
+        }
 
         Refund createdRefund = Refund.builder()
                 .order(order)
@@ -118,7 +129,7 @@ public class RefundServiceImpl implements RefundService {
                     .orElse(order.getCustomer());
             int currentPoints = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
 
-            int pointsToDeduct = (int) Math.floor(refundAmount / 10000.0);
+            int pointsToDeduct = (int) Math.floor(refundAmount / VND_PER_POINT_EARNED);
 
             int pointsToRestore = 0;
             if (isFullRefund && order.getCouponCode() != null && order.getCouponCode().startsWith("POINTS")) {
@@ -144,21 +155,29 @@ public class RefundServiceImpl implements RefundService {
     @Override
     @Transactional(readOnly = true)
     public List<RefundDTO> getAllRefunds() throws Exception {
+        User current = userService.getCurrentUser();
+        // Chỉ trả về các khoản hoàn tiền thuộc phạm vi cửa hàng/chi nhánh mà user được phép xem
         return refundRepository.findAll().stream()
+                .filter(r -> accessControl.canAccessBranch(current, r.getBranch()))
                 .map(RefundMapper::toDTO).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<RefundDTO> getRefundByCashier(Long cashierId) throws Exception {
+        User current = userService.getCurrentUser();
         return refundRepository.findByCashierId(cashierId).stream()
+                .filter(r -> current.getId().equals(cashierId)
+                        || accessControl.canManageBranch(current, r.getBranch()))
                 .map(RefundMapper::toDTO).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<RefundDTO> getRefundByShiftReport(Long shiftReportId) throws Exception {
+        User current = userService.getCurrentUser();
         return refundRepository.findByShiftReportId(shiftReportId).stream()
+                .filter(r -> accessControl.canAccessBranch(current, r.getBranch()))
                 .map(RefundMapper::toDTO).collect(Collectors.toList());
     }
 
@@ -167,30 +186,94 @@ public class RefundServiceImpl implements RefundService {
     public List<RefundDTO> getRefundByCashierAndDateRange(Long cashierId,
                                                           LocalDateTime startDate,
                                                           LocalDateTime endDate) throws Exception {
+        User current = userService.getCurrentUser();
         return refundRepository.findByCashierIdAndCreatedAtBetween(cashierId, startDate, endDate)
-                .stream().map(RefundMapper::toDTO).collect(Collectors.toList());
+                .stream()
+                .filter(r -> current.getId().equals(cashierId)
+                        || accessControl.canManageBranch(current, r.getBranch()))
+                .map(RefundMapper::toDTO).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<RefundDTO> getRefundByBranch(Long branchId) throws Exception {
+        User current = userService.getCurrentUser();
         return refundRepository.findByBranchId(branchId).stream()
+                .filter(r -> accessControl.canAccessBranch(current, r.getBranch()))
                 .map(RefundMapper::toDTO).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public RefundDTO getRefundById(Long refundId) throws Exception {
-        return refundRepository.findById(refundId)
-                .map(RefundMapper::toDTO).orElseThrow(
-                        () -> new Exception("Refund not found with id: " + refundId)
-                );
+        Refund refund = refundRepository.findById(refundId).orElseThrow(
+                () -> new Exception("Refund not found with id: " + refundId)
+        );
+        accessControl.assertCanAccessBranch(userService.getCurrentUser(), refund.getBranch());
+        return RefundMapper.toDTO(refund);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteRefund(Long refundId) throws Exception {
-        this.getRefundById(refundId);
-        refundRepository.deleteById(refundId);
+        Refund refund = refundRepository.findById(refundId).orElseThrow(
+                () -> new Exception("Refund not found with id: " + refundId)
+        );
+        accessControl.assertCanManageBranch(userService.getCurrentUser(), refund.getBranch());
+
+        Order order = refund.getOrder();
+        if (order != null) {
+            double refundAmount = refund.getAmount() != null ? refund.getAmount() : 0.0;
+            double orderTotal = order.getTotalAmount() != null ? order.getTotalAmount() : 0.0;
+            double remainingRefunded = refundRepository.findByOrderId(order.getId()).stream()
+                    .filter(r -> !r.getId().equals(refund.getId()))
+                    .mapToDouble(r -> r.getAmount() != null ? r.getAmount() : 0.0)
+                    .sum();
+
+            boolean orderWasFullyRefunded = order.getStatus() == OrderStatus.REFUNDED;
+            boolean reopenOrder = orderWasFullyRefunded && remainingRefunded < orderTotal - 0.01;
+
+            // Xóa khoản hoàn tiền làm đơn không còn "hoàn toàn bộ" -> lấy lại hàng khỏi kho và mở lại đơn
+            if (reopenOrder) {
+                if (order.getItems() != null && order.getBranch() != null) {
+                    List<OrderItem> sortedItems = order.getItems().stream()
+                            .filter(i -> i.getProduct() != null && i.getProduct().getId() != null)
+                            .sorted(Comparator.comparing(i -> i.getProduct().getId()))
+                            .collect(Collectors.toList());
+                    for (OrderItem item : sortedItems) {
+                        inventoryService.deductInventory(
+                                item.getProduct().getId(), order.getBranch().getId(), item.getQuantity());
+                    }
+                }
+                order.setStatus(OrderStatus.COMPLETED);
+                orderRepository.save(order);
+            }
+
+            // Đảo ngược điều chỉnh điểm tích lũy đã thực hiện khi tạo khoản hoàn tiền này
+            if (order.getCustomer() != null) {
+                Customer customer = customerRepository.findByIdWithLock(order.getCustomer().getId())
+                        .orElse(order.getCustomer());
+                int currentPoints = customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0;
+                int pointsDeductedBefore = (int) Math.floor(refundAmount / VND_PER_POINT_EARNED);
+                int pointsRestoredBefore = reopenOrder ? extractPointsUsed(order) : 0;
+                int updatedPoints = Math.max(0, currentPoints - pointsRestoredBefore + pointsDeductedBefore);
+                if (updatedPoints != currentPoints) {
+                    customer.setLoyaltyPoints(updatedPoints);
+                    customerRepository.save(customer);
+                }
+            }
+        }
+
+        refundRepository.delete(refund);
+    }
+
+    private int extractPointsUsed(Order order) {
+        if (order.getCouponCode() == null || !order.getCouponCode().startsWith("POINTS")) {
+            return 0;
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("-(\\d+)\\s*pts")
+                .matcher(order.getCouponCode());
+        return matcher.find() ? Integer.parseInt(matcher.group(1)) : 0;
     }
 }

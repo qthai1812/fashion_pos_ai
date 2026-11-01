@@ -11,6 +11,7 @@ import {
   updateCartItemQuantity,
 } from "../../../Redux Toolkit/features/cart/cartSlice";
 import { useToast } from "../../../components/ui/use-toast";
+import usePlanEntitlements from "@/hooks/usePlanEntitlements";
 
 const CartSection = ({ setShowHeldOrdersDialog }) => {
   const cartItems = useSelector(selectCartItems);
@@ -18,9 +19,11 @@ const CartSection = ({ setShowHeldOrdersDialog }) => {
   const { inventories = [] } = useSelector((state) => state.inventory || {});
   const dispatch = useDispatch();
   const { toast } = useToast();
+  const { hasFeature } = usePlanEntitlements();
+  const trackStock = hasFeature("inventory");
 
   const handleUpdateCartItemQuantity = (id, newQuantity) => {
-    if (newQuantity > 0) {
+    if (newQuantity > 0 && trackStock) {
       const inv = (inventories || []).find(
         (i) => (i.productId ?? i.product?.id) === id,
       );

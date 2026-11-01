@@ -18,6 +18,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from "recharts";
 import {
   getDashboardSummary,
@@ -84,21 +85,26 @@ export default function Dashboard() {
     ? [
         {
           name: "Active",
-          value: storeStatusDistribution.active,
+          value: Number(storeStatusDistribution.active || 0),
           color: COLORS[0],
         },
         {
           name: "Pending",
-          value: storeStatusDistribution.pending,
+          value: Number(storeStatusDistribution.pending || 0),
           color: COLORS[1],
         },
         {
           name: "Blocked",
-          value: storeStatusDistribution.blocked,
+          value: Number(storeStatusDistribution.blocked || 0),
           color: COLORS[2],
         },
       ]
     : [];
+
+  const totalStoresInPie = pieData.reduce(
+    (acc, curr) => acc + (curr.value || 0),
+    0
+  );
 
   // Lấy 5 cửa hàng có hoạt động mới nhất từ dữ liệu thực
   const recentStores = [...stores]
@@ -210,27 +216,52 @@ export default function Dashboard() {
             <CardTitle>Store Status Distribution</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            {totalStoresInPie === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground text-sm">
+                <Store className="h-10 w-10 mb-2 opacity-30" />
+                <p>No store data available</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={350}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="45%"
+                    labelLine={false}
+                    label={({ name, percent, value }) => {
+                      if (!value || value <= 0 || !percent || percent <= 0) return null;
+                      return `${name} ${(percent * 100).toFixed(0)}%`;
+                    }}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value, name) => [
+                      `${value} store${value !== 1 ? "s" : ""}`,
+                      name,
+                    ]}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    formatter={(value, entry) => (
+                      <span className="text-xs font-medium text-muted-foreground mr-2">
+                        {value}:{" "}
+                        <span className="font-semibold text-foreground">
+                          {entry.payload?.value ?? 0}
+                        </span>
+                      </span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -49,6 +49,11 @@ const navLinks = [
     icon: <Users className="w-5 h-5" />,
   },
   {
+    name: "Customers",
+    path: "/store/customers",
+    icon: <Users className="w-5 h-5" />,
+  },
+  {
     name: "Alerts",
     path: "/store/alerts",
     icon: <Truck className="w-5 h-5" />,

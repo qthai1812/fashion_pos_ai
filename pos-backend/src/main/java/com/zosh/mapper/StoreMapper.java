@@ -1,6 +1,7 @@
 package com.zosh.mapper;
 
 import com.zosh.modal.Store;
+import com.zosh.modal.StorePaymentInfo;
 import com.zosh.modal.User;
 import com.zosh.payload.dto.StoreDTO;
 
@@ -16,6 +17,7 @@ public class StoreMapper {
         storeDTO.setStoreAdmin(store.getStoreAdmin() != null ? UserMapper.toDTO(store.getStoreAdmin()) : null);
         storeDTO.setStoreType(store.getStoreType());
         storeDTO.setContact(store.getContact());
+        storeDTO.setPaymentInfo(store.getPaymentInfo() != null ? store.getPaymentInfo() : new StorePaymentInfo());
         storeDTO.setCreatedAt(store.getCreatedAt());
         storeDTO.setUpdatedAt(store.getUpdatedAt());
         storeDTO.setStatus(store.getStatus());
@@ -31,6 +33,7 @@ public class StoreMapper {
         store.setStoreAdmin(storeAdmin);
         store.setStoreType(storeDTO.getStoreType());
         store.setContact(storeDTO.getContact());
+        store.setPaymentInfo(storeDTO.getPaymentInfo() != null ? storeDTO.getPaymentInfo() : new StorePaymentInfo());
         store.setCommissionRate(storeDTO.getCommissionRate() != null ? storeDTO.getCommissionRate() : 2.5);
         if (storeDTO.getStatus() != null) {
             store.setStatus(storeDTO.getStatus());

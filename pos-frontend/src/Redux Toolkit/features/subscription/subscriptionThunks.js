@@ -210,3 +210,19 @@ export const countSubscriptionsByStatus = createAsyncThunk(
     }
   },
 );
+
+// Quyền lợi của gói hiện hành (giới hạn, mức đã dùng, tính năng bật/tắt) của cửa hàng người dùng đang đăng nhập
+export const getMyEntitlements = createAsyncThunk(
+  "subscription/getMyEntitlements",
+  async (userId, { rejectWithValue }) => {
+    try {
+      const headers = getAuthHeaders();
+      const res = await api.get("/api/subscriptions/entitlements", { headers });
+      return { userId: userId ?? null, data: res.data };
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to load plan entitlements",
+      );
+    }
+  },
+);

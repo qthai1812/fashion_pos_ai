@@ -1,27 +1,75 @@
 import { useState, useEffect, useRef } from "react";
-import { useSelector } from "react-redux";
-import { ShoppingBag, ShoppingCart, CreditCard } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  ShoppingBag,
+  ShoppingCart,
+  CreditCard,
+  AlertTriangle,
+  PlayCircle,
+  Loader2,
+} from "lucide-react";
 import POSHeader from "./components/POSHeader";
 import ProductSection from "./product/ProductSection";
 import CartSection from "./cart/CartSection";
 import CustomerPaymentSection from "./payment/CustomerPaymentSection";
 import PaymentDialog from "./payment/PaymentDialog";
-import ReceiptDialog from "./components/ReceiptDialog";
 import HeldOrdersDialog from "./components/HeldOrdersDialog";
 import CustomerDialog from "./customer/CustomerDialog";
 import InvoiceDialog from "./order/OrderDetails/InvoiceDialog";
 import { selectCartItems } from "../../Redux Toolkit/features/cart/cartSlice";
+import {
+  getCurrentShiftProgress,
+  startShift,
+} from "../../Redux Toolkit/features/shiftReport/shiftReportThunks";
+import { getStoreByEmployee } from "../../Redux Toolkit/features/store/storeThunks";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 
 const CreateOrderPage = () => {
+  const dispatch = useDispatch();
+  const { toast } = useToast();
+
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
   const [showHeldOrdersDialog, setShowHeldOrdersDialog] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState("products");
+  const [startingShift, setStartingShift] = useState(false);
 
   const searchInputRef = useRef(null);
   const discountInputRef = useRef(null);
   const cartItems = useSelector(selectCartItems);
+  const { currentShift, loading: shiftLoading } = useSelector(
+    (state) => state.shiftReport,
+  );
+  const { store } = useSelector((state) => state.store);
+
+  useEffect(() => {
+    dispatch(getCurrentShiftProgress());
+    if (!store?.id) {
+      dispatch(getStoreByEmployee());
+    }
+  }, [dispatch, store?.id]);
+
+  const handleStartShiftBanner = async () => {
+    setStartingShift(true);
+    try {
+      await dispatch(startShift()).unwrap();
+      await dispatch(getCurrentShiftProgress());
+      toast({
+        title: "Ca làm việc đã bắt đầu",
+        description: "Bạn đã sẵn sàng thực hiện giao dịch tại quầy POS.",
+      });
+    } catch (err) {
+      toast({
+        title: "Lỗi mở ca",
+        description: typeof err === "string" ? err : "Không thể bắt đầu ca làm việc",
+        variant: "destructive",
+      });
+    } finally {
+      setStartingShift(false);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -54,6 +102,32 @@ const CreateOrderPage = () => {
   return (
     <div className="h-full flex flex-col bg-background overflow-hidden">
       <POSHeader />
+
+      {/* Thanh nhắc mở ca làm việc nếu thu ngân chưa mở ca */}
+      {!shiftLoading && !currentShift && (
+        <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
+          <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200 font-medium">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              Bạn chưa mở ca làm việc hôm nay. Vui lòng bắt đầu ca trước khi
+              thanh toán đơn hàng.
+            </span>
+          </div>
+          <Button
+            size="sm"
+            onClick={handleStartShiftBanner}
+            disabled={startingShift}
+            className="h-7 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            {startingShift ? (
+              <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+            ) : (
+              <PlayCircle className="w-3.5 h-3.5 mr-1" />
+            )}
+            Bắt đầu ca ngay
+          </Button>
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
         {/* Cột 1: Danh sách sản phẩm */}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router";
 import { Input } from "@/components/ui/input";
 import {
   Tooltip,
@@ -36,6 +37,7 @@ import {
   Headphones,
   MapPin,
   Plus,
+  CreditCard,
 } from "lucide-react";
 
 const FEATURE_FLAGS = [
@@ -107,6 +109,7 @@ const columns = [
 
 const SubscriptionPlansPage = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { plans, error } = useSelector((state) => state.subscriptionPlan);
   const [search, setSearch] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -189,12 +192,22 @@ const SubscriptionPlansPage = () => {
           dispatch(getAllSubscriptionPlans());
         }}
       />
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold">Subscription Plans</h1>
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add New Plan
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/super-admin/settings?tab=payment")}
+            className="border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
+          >
+            <CreditCard className="w-4 h-4 mr-2 text-emerald-600" />
+            Cấu hình Nhận tiền (MoMo / Visa)
+          </Button>
+          <Button onClick={() => setAddDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add New Plan
+          </Button>
+        </div>
       </div>
       <div className="flex flex-wrap gap-4 mb-4 items-center">
         <Input

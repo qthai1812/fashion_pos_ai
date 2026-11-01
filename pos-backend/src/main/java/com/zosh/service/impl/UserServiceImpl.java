@@ -1,7 +1,10 @@
 package com.zosh.service.impl;
 
 import com.zosh.configuration.JwtProvider;
+import com.zosh.domain.StoreStatus;
+import com.zosh.domain.UserRole;
 import com.zosh.exceptions.UserException;
+import com.zosh.modal.Store;
 import com.zosh.modal.User;
 import com.zosh.payload.dto.UserDto;
 import com.zosh.repository.UserRepository;
@@ -46,6 +49,21 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByEmail(email);
         if (user == null) {
             throw new UserException("user not found");
+        }
+        // JWT có hiệu lực 24h: phải kiểm tra lại trạng thái tài khoản/cửa hàng ở mỗi request
+        // để việc khóa tài khoản hoặc BLOCK cửa hàng có hiệu lực ngay lập tức.
+        if (Boolean.FALSE.equals(user.getLoginAccess())) {
+            throw new UserException("Login access for this account has been disabled by your manager.");
+        }
+        if (user.getRole() != UserRole.ROLE_ADMIN) {
+            Store effectiveStore = user.getStore();
+            if (effectiveStore == null && user.getBranch() != null) {
+                effectiveStore = user.getBranch().getStore();
+            }
+            if (effectiveStore != null && effectiveStore.getStatus() == StoreStatus.BLOCKED) {
+                throw new UserException("Store \"" + effectiveStore.getBrand()
+                        + "\" has been BLOCKED by Super Admin. Access is suspended for all accounts in this store.");
+            }
         }
         return user;
     }

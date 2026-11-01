@@ -1,5 +1,6 @@
 package com.zosh.service.impl;
 
+import com.zosh.domain.PlanFeature;
 import com.zosh.mapper.InventoryMapper;
 import com.zosh.modal.Branch;
 import com.zosh.modal.Inventory;
@@ -8,7 +9,9 @@ import com.zosh.payload.dto.InventoryDTO;
 import com.zosh.repository.BranchRepository;
 import com.zosh.repository.InventoryRepository;
 import com.zosh.repository.ProductRepository;
+import com.zosh.service.AccessControlService;
 import com.zosh.service.InventoryService;
+import com.zosh.service.PlanLimitChecker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,15 @@ public class InventoryServiceImpl implements InventoryService {
     private final InventoryRepository inventoryRepository;
     private final BranchRepository branchRepository;
     private final ProductRepository productRepository;
+    private final AccessControlService accessControl;
+    private final PlanLimitChecker planLimitChecker;
+
+    /** Gói cước không có Inventory System: không quản lý/trừ kho, bán hàng không bị ràng buộc tồn kho. */
+    private boolean inventoryDisabledForBranchId(Long branchId) {
+        return branchRepository.findById(branchId)
+                .map(b -> !planLimitChecker.hasFeature(b.getStore(), PlanFeature.INVENTORY))
+                .orElse(false);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -36,6 +48,8 @@ public class InventoryServiceImpl implements InventoryService {
         Branch branch = branchRepository.findById(inventoryDTO.getBranchId()).orElseThrow(
                 () -> new Exception("Branch not found with id: " + inventoryDTO.getBranchId())
         );
+        accessControl.assertCanManageBranch(accessControl.currentUser(), branch);
+        planLimitChecker.requireFeature(branch.getStore(), PlanFeature.INVENTORY);
         Product product = productRepository.findById(inventoryDTO.getProductId()).orElseThrow(
                 () -> new Exception("Product not found with id: " + inventoryDTO.getProductId())
         );
@@ -95,6 +109,8 @@ public class InventoryServiceImpl implements InventoryService {
         Inventory inventory = inventoryRepository.findById(id).orElseThrow(
                 () -> new Exception("Inventory not found with id: " + id)
         );
+        accessControl.assertCanManageBranch(accessControl.currentUser(), inventory.getBranch());
+        planLimitChecker.requireFeature(inventory.getBranch().getStore(), PlanFeature.INVENTORY);
         inventory.setQuantity(inventoryDTO.getQuantity());
         if (inventoryDTO.getMinStockLevel() != null && inventoryDTO.getMinStockLevel() >= 0) {
             inventory.setMinStockLevel(inventoryDTO.getMinStockLevel());
@@ -109,6 +125,8 @@ public class InventoryServiceImpl implements InventoryService {
         Inventory inventory = inventoryRepository.findById(id).orElseThrow(
                 () -> new Exception("Inventory not found with id: " + id)
         );
+        accessControl.assertCanManageBranch(accessControl.currentUser(), inventory.getBranch());
+        planLimitChecker.requireFeature(inventory.getBranch().getStore(), PlanFeature.INVENTORY);
         inventoryRepository.delete(inventory);
     }
 
@@ -144,6 +162,9 @@ public class InventoryServiceImpl implements InventoryService {
         if (quantity <= 0) {
             throw new IllegalArgumentException("Quantity to deduct must be greater than 0");
         }
+        if (inventoryDisabledForBranchId(branchId)) {
+            return;
+        }
         List<Inventory> locked = inventoryRepository
                 .findAllByProductIdAndBranchIdWithLock(productId, branchId);
 
@@ -174,6 +195,9 @@ public class InventoryServiceImpl implements InventoryService {
     public void restoreInventory(Long productId, Long branchId, int quantity) throws Exception {
         if (quantity <= 0) {
             throw new IllegalArgumentException("Quantity to restore must be greater than 0");
+        }
+        if (inventoryDisabledForBranchId(branchId)) {
+            return;
         }
         List<Inventory> locked = inventoryRepository
                 .findAllByProductIdAndBranchIdWithLock(productId, branchId);

@@ -40,6 +40,9 @@ public class Store {
     @Embedded
     private StoreContact contact = new StoreContact();
 
+    @Embedded
+    private StorePaymentInfo paymentInfo = new StorePaymentInfo();
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -48,6 +51,9 @@ public class Store {
         }
         if (commissionRate == null) {
             commissionRate = 2.5;
+        }
+        if (paymentInfo == null) {
+            paymentInfo = new StorePaymentInfo();
         }
     }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import OwnerDetailsForm from './OwnerDetailsForm';
 import StoreDetailsForm from './StoreDetailsForm';
@@ -11,7 +11,6 @@ import { useNavigate } from 'react-router';
 const Onboarding = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { error, isCompleted } = useSelector((state) => state.onboarding);
 
   const [step, setStep] = useState(1);
   const [fadeIn, setFadeIn] = useState(true);
@@ -113,12 +112,6 @@ const Onboarding = () => {
       }, 150);
     }
   };
-
-  useEffect(() => {
-    if (isCompleted) {
-      navigate('/store');
-    }
-  }, [isCompleted, navigate]);
 
   const renderStep = () => {
     switch (step) {
@@ -244,15 +237,15 @@ const Onboarding = () => {
               </div>
             </div>
 
-            {(error || localError) && (
+            {localError && (
               <div className="mb-6 p-4 bg-destructive/10 border border-destructive/30 text-destructive rounded-lg shadow-sm">
                 <div className="flex items-center">
                   <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
-                  {typeof (error || localError) === 'string'
-                    ? (error || localError)
-                    : ((error || localError)?.message || 'An unexpected error occurred')}
+                  {typeof localError === 'string'
+                    ? localError
+                    : (localError?.message || 'An unexpected error occurred')}
                 </div>
               </div>
             )}

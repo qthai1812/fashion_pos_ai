@@ -1,16 +1,19 @@
 package com.zosh.service.impl;
 
 import com.zosh.domain.OrderStatus;
+import com.zosh.domain.PlanFeature;
 import com.zosh.modal.Order;
 import com.zosh.modal.OrderItem;
 import com.zosh.modal.Refund;
 import com.zosh.modal.ShiftReport;
 import com.zosh.payload.response.*;
+import com.zosh.repository.BranchRepository;
 import com.zosh.repository.InventoryRepository;
 import com.zosh.repository.OrderRepository;
 import com.zosh.repository.RefundRepository;
 import com.zosh.repository.ShiftReportRepository;
 import com.zosh.service.BranchAnalyticsService;
+import com.zosh.service.PlanLimitChecker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,8 @@ public class BranchAnalyticsServiceImpl implements BranchAnalyticsService {
     private final InventoryRepository inventoryRepository;
     private final ShiftReportRepository shiftReportRepository;
     private final RefundRepository refundRepository;
+    private final BranchRepository branchRepository;
+    private final PlanLimitChecker planLimitChecker;
 
     @Override
     public List<DailySalesDTO> getDailySalesChart(Long branchId, int days) {
@@ -120,7 +125,11 @@ public class BranchAnalyticsServiceImpl implements BranchAnalyticsService {
     }
 
     @Override
-    public List<CategorySalesDTO> getCategoryWiseSalesBreakdown(Long branchId, LocalDate date) {
+    public List<CategorySalesDTO> getCategoryWiseSalesBreakdown(Long branchId, LocalDate date) throws Exception {
+        planLimitChecker.requireFeature(
+                branchRepository.findById(branchId)
+                        .orElseThrow(() -> new Exception("Branch not found with id: " + branchId)).getStore(),
+                PlanFeature.ADVANCED_REPORTS);
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
         List<Order> orders = orderRepository.findByBranchIdAndCreatedAtBetween(branchId, start, end).stream()

@@ -3,9 +3,15 @@ import { styles } from "./pdfStyles";
 import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 
 // Create PDF document
-export const OrderPDF = ({ order }) => (
+// branding: { storeName } chỉ được truyền khi gói cước của cửa hàng bật Invoice Branding
+export const OrderPDF = ({ order, branding }) => (
   <Document>
     <Page size="A4" style={styles.page}>
+      {branding?.storeName ? (
+        <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8 }}>
+          {branding.storeName}
+        </Text>
+      ) : null}
       <View style={styles.header}>
         <Text>Order Details - #{order.id}</Text>
       </View>

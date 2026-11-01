@@ -7,6 +7,7 @@ import com.zosh.modal.*;
 import com.zosh.payload.dto.BranchDTO;
 import com.zosh.repository.*;
 import com.zosh.service.BranchService;
+import com.zosh.service.PlanLimitChecker;
 import com.zosh.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class BranchServiceImpl implements BranchService {
     private final OrderRepository orderRepository;
     private final RefundRepository refundRepository;
     private final ShiftReportRepository shiftReportRepository;
+    private final PlanLimitChecker planLimitChecker;
 
     private void validateBranchAccess(User user, Branch branch) throws Exception {
         if (user == null || branch == null || branch.getStore() == null) {
@@ -82,6 +84,7 @@ public class BranchServiceImpl implements BranchService {
             throw new UserException("Store not found for creating branch");
         }
         validateStoreAdminOrManager(currentUser, store);
+        planLimitChecker.checkBranchLimit(store);
 
         Branch branch = BranchMapper.toEntity(branchDTO, store);
         Branch savedBranch = branchRepository.save(branch);
