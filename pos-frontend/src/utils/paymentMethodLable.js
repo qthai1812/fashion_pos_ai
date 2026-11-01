@@ -1,11 +1,11 @@
 export const getPaymentMethodLabel = (method) => {
   switch (method?.toLowerCase()) {
     case "cash":
-      return "Cash";
+      return "Tiền mặt (Cash)";
     case "card":
-      return "Card";
+      return "Thẻ Visa / Ghi nợ";
     case "upi":
-      return "UPI";
+      return "MoMo QR";
     default:
       return method;
   }

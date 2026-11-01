@@ -59,6 +59,75 @@ export const useSettingsState = () => {
     maintenanceMode: false,
   });
 
+  const [paymentConfig, setPaymentConfig] = useState({
+    acceptMomo: true,
+    acceptCard: true,
+    momoPhone: "0901234567",
+    momoOwnerName: "POS PRO ENTERPRISE SAAS",
+    momoQrImage: "",
+    cardBankName: "Vietcombank - Visa",
+    cardNumber: "4221567890123456",
+    cardHolderName: "POS PRO ENTERPRISE SAAS",
+    cardExpiry: "12/29",
+  });
+  const [savingPayment, setSavingPayment] = useState(false);
+
+  useEffect(() => {
+    const fetchPlatformPaymentConfig = async () => {
+      try {
+        const res = await api.get("/api/payment-gateway/platform-config");
+        if (res.data) {
+          setPaymentConfig({
+            acceptMomo: res.data.acceptMomo ?? true,
+            acceptCard: res.data.acceptCard ?? true,
+            momoPhone: res.data.momoPhone || "",
+            momoOwnerName: res.data.momoOwnerName || "",
+            momoQrImage: res.data.momoQrImage || "",
+            cardBankName: res.data.cardBankName || "",
+            cardNumber: res.data.cardNumber || "",
+            cardHolderName: res.data.cardHolderName || "",
+            cardExpiry: res.data.cardExpiry || "",
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load platform payment config:", err);
+      }
+    };
+    fetchPlatformPaymentConfig();
+  }, []);
+
+  const handlePaymentConfigChange = (field, value) => {
+    setPaymentConfig((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePaymentConfigSave = async () => {
+    setSavingPayment(true);
+    try {
+      const res = await api.put(
+        "/api/payment-gateway/platform-config",
+        paymentConfig,
+      );
+      if (res.data) {
+        setPaymentConfig((prev) => ({ ...prev, ...res.data }));
+      }
+      toast({
+        title: "Đã lưu cấu hình nhận tiền POS Admin",
+        description:
+          "Thông tin MoMo QR & Thẻ Visa/Ghi nợ nhận tiền gói cước đã được đồng bộ.",
+      });
+    } catch (err) {
+      toast({
+        title: "Lỗi khi lưu cấu hình",
+        description:
+          err.response?.data?.message ||
+          "Không thể lưu thông tin nhận tiền POS Admin.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
   const handleProfileUpdate = async () => {
     try {
       await api.put("/api/users/profile", {
@@ -188,6 +257,8 @@ export const useSettingsState = () => {
     showPasswords,
     notifications,
     systemSettings,
+    paymentConfig,
+    savingPayment,
     handleProfileUpdate,
     handlePasswordChange,
     handleNotificationToggle,
@@ -195,5 +266,7 @@ export const useSettingsState = () => {
     handleProfileFieldChange,
     handlePasswordFieldChange,
     handleShowPasswordToggle,
+    handlePaymentConfigChange,
+    handlePaymentConfigSave,
   };
 };

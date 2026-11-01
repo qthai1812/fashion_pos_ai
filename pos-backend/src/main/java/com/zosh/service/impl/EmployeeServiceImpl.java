@@ -6,6 +6,7 @@ import com.zosh.modal.*;
 import com.zosh.payload.dto.UserDto;
 import com.zosh.repository.*;
 import com.zosh.service.EmployeeService;
+import com.zosh.service.PlanLimitChecker;
 import com.zosh.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +29,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final OrderRepository orderRepository;
     private final ShiftReportRepository shiftReportRepository;
     private final RefundRepository refundRepository;
+    private final PlanLimitChecker planLimitChecker;
 
     private void validateStorePermission(Store store) throws Exception {
         User currentUser = userService.getCurrentUser();
@@ -80,6 +82,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         );
         validateStorePermission(store);
         checkNotAdminRole(employee.getRole());
+        planLimitChecker.checkUserLimit(store);
 
         if (userRepository.findByEmail(employee.getEmail()) != null) {
             throw new Exception("Email already registered: " + employee.getEmail());
@@ -120,6 +123,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         );
         validateBranchPermission(branch);
         checkNotAdminRole(employee.getRole());
+        planLimitChecker.checkUserLimit(branch.getStore());
 
         if (userRepository.findByEmail(employee.getEmail()) != null) {
             throw new Exception("Email already registered: " + employee.getEmail());
@@ -172,6 +176,16 @@ public class EmployeeServiceImpl implements EmployeeService {
             branch = branchRepository.findById(employeeDetails.getBranchId()).orElseThrow(
                     () -> new Exception("branch not found")
             );
+            // Không cho chuyển nhân viên sang chi nhánh của cửa hàng khác (cách ly dữ liệu multi-tenant)
+            Store employeeStore = existingEmployee.getStore();
+            if (employeeStore != null && branch.getStore() != null
+                    && !employeeStore.getId().equals(branch.getStore().getId())) {
+                throw new Exception("Branch does not belong to the employee's store");
+            }
+            validateBranchPermission(branch);
+            if (employeeStore == null) {
+                existingEmployee.setStore(branch.getStore());
+            }
         }
 
         if (employeeDetails.getFullName() != null) {

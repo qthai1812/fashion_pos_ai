@@ -1,8 +1,10 @@
 package com.zosh.service.impl;
 
+import com.zosh.domain.SubscriptionStatus;
 import com.zosh.modal.SubscriptionPlan;
 import com.zosh.payload.dto.SubscriptionPlanDTO;
 import com.zosh.repository.SubscriptionPlanRepository;
+import com.zosh.repository.SubscriptionRepository;
 import com.zosh.service.SubscriptionPlanService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,9 +17,35 @@ import java.util.stream.Collectors;
 public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
 
     private final SubscriptionPlanRepository subscriptionPlanRepository;
+    private final SubscriptionRepository subscriptionRepository;
+
+    private static final java.util.Set<String> BILLING_CYCLES = java.util.Set.of("MONTHLY", "YEARLY");
+
+    /** Kiểm tra dữ liệu gói ở phía server (không tin vào validate của form frontend). */
+    private void validate(SubscriptionPlanDTO dto) {
+        if (dto.getName() == null || dto.getName().isBlank()) {
+            throw new IllegalArgumentException("Plan name is required");
+        }
+        if (dto.getPrice() == null || dto.getPrice() < 0) {
+            throw new IllegalArgumentException("Plan price must be 0 or greater");
+        }
+        if (dto.getBillingCycle() == null || !BILLING_CYCLES.contains(dto.getBillingCycle().toUpperCase())) {
+            throw new IllegalArgumentException("Billing cycle must be MONTHLY or YEARLY");
+        }
+        if (dto.getMaxBranches() == null || dto.getMaxBranches() < 1
+                || dto.getMaxUsers() == null || dto.getMaxUsers() < 1
+                || dto.getMaxProducts() == null || dto.getMaxProducts() < 1) {
+            throw new IllegalArgumentException("Branches, users and products limits must be at least 1");
+        }
+    }
+
+    private static boolean flag(Boolean value) {
+        return Boolean.TRUE.equals(value);
+    }
 
     @Override
     public SubscriptionPlanDTO createPlan(SubscriptionPlanDTO dto) {
+        validate(dto);
         SubscriptionPlan plan = toEntity(dto);
         SubscriptionPlan saved = subscriptionPlanRepository.save(plan);
         return toDTO(saved);
@@ -27,23 +55,27 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
     public SubscriptionPlanDTO updatePlan(Long id, SubscriptionPlanDTO dto) throws Exception {
         SubscriptionPlan plan = subscriptionPlanRepository.findById(id)
                 .orElseThrow(() -> new Exception("Subscription plan not found with id: " + id));
+        validate(dto);
 
         plan.setName(dto.getName());
         plan.setPrice(dto.getPrice());
-        plan.setBillingCycle(dto.getBillingCycle());
+        plan.setBillingCycle(dto.getBillingCycle().toUpperCase());
         plan.setMaxBranches(dto.getMaxBranches());
         plan.setMaxUsers(dto.getMaxUsers());
         plan.setMaxProducts(dto.getMaxProducts());
-        plan.setActive(dto.getActive());
-        plan.setAdvancedReports(dto.getAdvancedReports());
-        plan.setInventory(dto.getInventory());
-        plan.setIntegrations(dto.getIntegrations());
-        plan.setEcommerce(dto.getEcommerce());
-        plan.setInvoiceBranding(dto.getInvoiceBranding());
-        plan.setPrioritySupport(dto.getPrioritySupport());
-        plan.setMultiLocation(dto.getMultiLocation());
+        if (dto.getActive() != null) {
+            plan.setActive(dto.getActive());
+        }
+        plan.setAdvancedReports(flag(dto.getAdvancedReports()));
+        plan.setInventory(flag(dto.getInventory()));
+        plan.setIntegrations(flag(dto.getIntegrations()));
+        plan.setEcommerce(flag(dto.getEcommerce()));
+        plan.setInvoiceBranding(flag(dto.getInvoiceBranding()));
+        plan.setPrioritySupport(flag(dto.getPrioritySupport()));
+        plan.setMultiLocation(flag(dto.getMultiLocation()));
         plan.setDescription(dto.getDescription());
-        plan.setExtraFeatures(dto.getExtraFeatures());
+        // Tính năng của gói là cố định (cờ boolean), không còn danh sách tính năng tự do
+        plan.setExtraFeatures(new java.util.ArrayList<>());
 
         SubscriptionPlan updated = subscriptionPlanRepository.save(plan);
         return toDTO(updated);
@@ -67,6 +99,11 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
     public void deletePlan(Long id) throws Exception {
         if (!subscriptionPlanRepository.existsById(id)) {
             throw new Exception("Subscription plan not found with id: " + id);
+        }
+        boolean inUse = subscriptionRepository.findByStatus(SubscriptionStatus.ACTIVE).stream()
+                .anyMatch(s -> s.getPlanId() != null && s.getPlanId().trim().equals(String.valueOf(id)));
+        if (inUse) {
+            throw new IllegalArgumentException("This plan is used by stores with an active subscription and cannot be deleted. Deactivate it instead.");
         }
         subscriptionPlanRepository.deleteById(id);
     }
@@ -101,7 +138,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
         return SubscriptionPlan.builder()
                 .name(dto.getName())
                 .price(dto.getPrice())
-                .billingCycle(dto.getBillingCycle())
+                                .billingCycle(dto.getBillingCycle().toUpperCase())
                 .maxBranches(dto.getMaxBranches())
                 .maxUsers(dto.getMaxUsers())
                 .maxProducts(dto.getMaxProducts())
@@ -114,7 +151,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
                 .prioritySupport(dto.getPrioritySupport())
                 .multiLocation(dto.getMultiLocation())
                 .description(dto.getDescription())
-                .extraFeatures(dto.getExtraFeatures())
+                .extraFeatures(new java.util.ArrayList<>())
                 .build();
     }
 }

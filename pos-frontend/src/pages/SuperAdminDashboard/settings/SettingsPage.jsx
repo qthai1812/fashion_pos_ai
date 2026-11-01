@@ -1,10 +1,18 @@
 import React from "react";
+import { useSearchParams } from "react-router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Shield, Bell, Settings as SettingsIcon } from "lucide-react";
+import {
+  User,
+  Shield,
+  Bell,
+  Settings as SettingsIcon,
+  CreditCard,
+} from "lucide-react";
 import ProfileSettingsForm from "./components/ProfileSettingsForm";
 import SecuritySettingsForm from "./components/SecuritySettingsForm";
 import NotificationSettingsForm from "./components/NotificationSettingsForm";
 import SystemSettingsForm from "./components/SystemSettingsForm";
+import PlatformPaymentSettingsForm from "./components/PlatformPaymentSettingsForm";
 import { useSettingsState } from "./components/useSettingsState";
 
 const SettingsTabTrigger = ({ value, children }) => (
@@ -14,6 +22,9 @@ const SettingsTabTrigger = ({ value, children }) => (
 );
 
 export default function SettingsPage() {
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "payment";
+
   const {
     profileData,
     loading,
@@ -21,6 +32,8 @@ export default function SettingsPage() {
     showPasswords,
     notifications,
     systemSettings,
+    paymentConfig,
+    savingPayment,
     handleProfileUpdate,
     handlePasswordChange,
     handleNotificationToggle,
@@ -28,36 +41,54 @@ export default function SettingsPage() {
     handleProfileFieldChange,
     handlePasswordFieldChange,
     handleShowPasswordToggle,
+    handlePaymentConfigChange,
+    handlePaymentConfigSave,
   } = useSettingsState();
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
+        <h2 className="text-3xl font-bold tracking-tight">
+          Cài đặt Hệ thống & Nhận Thanh toán (POS Admin)
+        </h2>
         <p className="text-muted-foreground">
-          Manage your account and system preferences
+          Quản lý tài khoản quản trị, cấu hình nhận tiền gói cước (MoMo QR / Thẻ
+          Visa) và thiết lập hệ thống
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue={initialTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <SettingsTabTrigger value="payment">
+            <CreditCard className="w-4 h-4 text-emerald-500" />
+            Nhận thanh toán (MoMo / Visa)
+          </SettingsTabTrigger>
           <SettingsTabTrigger value="profile">
             <User className="w-4 h-4" />
-            Profile
+            Hồ sơ (Profile)
           </SettingsTabTrigger>
           <SettingsTabTrigger value="security">
             <Shield className="w-4 h-4" />
-            Security
+            Bảo mật (Security)
           </SettingsTabTrigger>
           <SettingsTabTrigger value="notifications">
             <Bell className="w-4 h-4" />
-            Notifications
+            Thông báo
           </SettingsTabTrigger>
           <SettingsTabTrigger value="system">
             <SettingsIcon className="w-4 h-4" />
-            System
+            Hệ thống
           </SettingsTabTrigger>
         </TabsList>
+
+        <TabsContent value="payment">
+          <PlatformPaymentSettingsForm
+            paymentConfig={paymentConfig}
+            onChange={handlePaymentConfigChange}
+            onSave={handlePaymentConfigSave}
+            saving={savingPayment}
+          />
+        </TabsContent>
 
         <TabsContent value="profile">
           <ProfileSettingsForm
@@ -94,4 +125,4 @@ export default function SettingsPage() {
       </Tabs>
     </div>
   );
-} 
+}

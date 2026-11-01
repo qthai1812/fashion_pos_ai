@@ -2,12 +2,9 @@ import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./features/auth/authSlice.js";
 import storeReducer from "./features/store/storeSlice.js";
 import branchReducer from "./features/branch/branchSlice.js";
-import onboardingReducer from "./features/onboarding/onboardingSlice.js";
 import userReducer from "./features/user/userSlice.js";
 import productReducer from "./features/product/productSlice.js";
 import categoryReducer from "./features/category/categorySlice.js";
-import saleReducer from "./features/sale/saleSlice.js";
-import transactionReducer from "./features/transaction/transactionSlice.js";
 import inventoryReducer from "./features/inventory/inventorySlice.js";
 import orderReducer from "./features/order/orderSlice.js";
 import customerReducer from "./features/customer/customerSlice.js";
@@ -20,7 +17,6 @@ import storeAnalyticsReducer from "./features/storeAnalytics/storeAnalyticsSlice
 import adminDashboardReducer from "./features/adminDashboard/adminDashboardSlice.js";
 import subscriptionPlanReducer from "./features/subscriptionPlan/subscriptionPlanSlice.js";
 import subscriptionReducer from "./features/subscription/subscriptionSlice.js";
-import paymentReducer from "./features/payment/paymentSlice.js";
 import couponReducer from "./features/coupon/couponSlice.js";
 
 const globleState = configureStore({
@@ -28,17 +24,13 @@ const globleState = configureStore({
     auth: authReducer,
     store: storeReducer,
     branch: branchReducer,
-    onboarding: onboardingReducer,
     user: userReducer,
     category: categoryReducer,
     product: productReducer,
-    employee:employeeReducer,
+    employee: employeeReducer,
     inventory: inventoryReducer,
     order: orderReducer,
     customer: customerReducer,
-    // supplier: supplierReducer,
-    sale: saleReducer,
-    transaction: transactionReducer,
     cart: cartReducer,
     shiftReport: shiftReportReducer,
     refund: refundReducer,
@@ -47,7 +39,6 @@ const globleState = configureStore({
     adminDashboard: adminDashboardReducer,
     subscriptionPlan: subscriptionPlanReducer,
     subscription: subscriptionReducer,
-    payment: paymentReducer,
     coupon: couponReducer,
   },
 });

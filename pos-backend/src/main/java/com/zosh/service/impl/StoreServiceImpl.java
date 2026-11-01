@@ -33,6 +33,7 @@ public class StoreServiceImpl implements StoreService {
     private final OrderItemRepository orderItemRepository;
     private final RefundRepository refundRepository;
     private final ShiftReportRepository shiftReportRepository;
+    private final CustomerRepository customerRepository;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -131,6 +132,23 @@ public class StoreServiceImpl implements StoreService {
                     .email(storeDTO.getContact().getEmail() != null ? storeDTO.getContact().getEmail() : currentContact.getEmail())
                     .build();
             existing.setContact(contact);
+        }
+        if (storeDTO.getPaymentInfo() != null) {
+            StorePaymentInfo currentPay = existing.getPaymentInfo() != null ? existing.getPaymentInfo() : new StorePaymentInfo();
+            StorePaymentInfo reqPay = storeDTO.getPaymentInfo();
+            StorePaymentInfo updatedPay = StorePaymentInfo.builder()
+                    .acceptCash(reqPay.getAcceptCash() != null ? reqPay.getAcceptCash() : currentPay.getAcceptCash())
+                    .acceptMomo(reqPay.getAcceptMomo() != null ? reqPay.getAcceptMomo() : currentPay.getAcceptMomo())
+                    .acceptCard(reqPay.getAcceptCard() != null ? reqPay.getAcceptCard() : currentPay.getAcceptCard())
+                    .momoPhone(reqPay.getMomoPhone() != null ? reqPay.getMomoPhone() : currentPay.getMomoPhone())
+                    .momoOwnerName(reqPay.getMomoOwnerName() != null ? reqPay.getMomoOwnerName() : currentPay.getMomoOwnerName())
+                    .momoQrImage(reqPay.getMomoQrImage() != null ? reqPay.getMomoQrImage() : currentPay.getMomoQrImage())
+                    .cardBankName(reqPay.getCardBankName() != null ? reqPay.getCardBankName() : currentPay.getCardBankName())
+                    .cardNumber(reqPay.getCardNumber() != null ? reqPay.getCardNumber() : currentPay.getCardNumber())
+                    .cardHolderName(reqPay.getCardHolderName() != null ? reqPay.getCardHolderName() : currentPay.getCardHolderName())
+                    .cardExpiry(reqPay.getCardExpiry() != null ? reqPay.getCardExpiry() : currentPay.getCardExpiry())
+                    .build();
+            existing.setPaymentInfo(updatedPay);
         }
         Store updatedStore = storeRepository.save(existing);
         return StoreMapper.toDTO(updatedStore);
@@ -250,6 +268,14 @@ public class StoreServiceImpl implements StoreService {
         List<Subscription> subscriptions = subscriptionRepository.findByStoreId(storeId);
         if (!subscriptions.isEmpty()) {
             subscriptionRepository.deleteAll(subscriptions);
+        }
+
+        List<Customer> storeCustomers = customerRepository.findByStoreId(storeId);
+        for (Customer c : storeCustomers) {
+            if (c.getStore() != null && c.getStore().getId().equals(storeId)) {
+                c.setStore(null);
+                customerRepository.save(c);
+            }
         }
 
         storeRepository.delete(store);

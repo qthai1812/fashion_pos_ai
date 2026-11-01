@@ -2,6 +2,7 @@ package com.zosh.service.impl;
 
 import com.zosh.domain.OrderStatus;
 import com.zosh.domain.UserRole;
+import com.zosh.domain.PlanFeature;
 import com.zosh.mapper.BranchMapper;
 import com.zosh.mapper.ProductMapper;
 import com.zosh.mapper.RefundMapper;
@@ -12,6 +13,7 @@ import com.zosh.payload.dto.ProductDTO;
 import com.zosh.payload.dto.UserDto;
 import com.zosh.payload.response.*;
 import com.zosh.repository.*;
+import com.zosh.service.PlanLimitChecker;
 import com.zosh.service.StoreAnalyticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
     private final InventoryRepository inventoryRepository;
     private final StoreRepository storeRepository;
     private final RefundRepository refundRepository;
+    private final PlanLimitChecker planLimitChecker;
 
     private Store resolveStoreAndValidateAccess(Long userOrStoreAdminId) throws Exception {
         User targetUser = userRepository.findById(userOrStoreAdminId)
@@ -147,6 +150,7 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
 
     @Override
     public List<DailySalesDTO> getMonthlySales(Long storeAdminId) throws Exception {
+        planLimitChecker.requireFeature(resolveStoreAndValidateAccess(storeAdminId), PlanFeature.ADVANCED_REPORTS);
         List<Order> orders = getAllOrdersForUser(storeAdminId);
         Map<String, double[]> monthMap = new TreeMap<>();
         for (Order o : orders) {
@@ -163,6 +167,7 @@ public class StoreAnalyticsServiceImpl implements StoreAnalyticsService {
 
     @Override
     public List<CategorySalesDTO> getSalesByCategory(Long storeAdminId) throws Exception {
+        planLimitChecker.requireFeature(resolveStoreAndValidateAccess(storeAdminId), PlanFeature.ADVANCED_REPORTS);
         List<Order> orders = getAllOrdersForUser(storeAdminId);
         Map<String, double[]> catMap = new HashMap<>();
         for (Order o : orders) {

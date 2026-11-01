@@ -37,6 +37,7 @@ const SettingsContent = ({
       <PaymentSettings
         settings={paymentSettings}
         onChange={onPaymentSettingsChange}
+        onSave={onSaveAll}
       />
 
       <Button

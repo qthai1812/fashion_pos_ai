@@ -8,7 +8,8 @@ import {
   getStoreSubscriptions,
   getAllSubscriptions,
   getExpiringSubscriptions,
-  countSubscriptionsByStatus
+  countSubscriptionsByStatus,
+  getMyEntitlements
 } from './subscriptionThunks';
 
 const initialState = {
@@ -16,6 +17,9 @@ const initialState = {
   selectedSubscription: null,
   expiringSubscriptions: [],
   countByStatus: null,
+  entitlements: null,
+  entitlementsUserId: null,
+  entitlementsLoading: false,
   loading: false,
   error: null,
 };
@@ -29,6 +33,8 @@ const subscriptionSlice = createSlice({
       state.selectedSubscription = null;
       state.expiringSubscriptions = [];
       state.countByStatus = null;
+      state.entitlements = null;
+      state.entitlementsUserId = null;
       state.error = null;
     },
   },
@@ -132,8 +138,21 @@ const subscriptionSlice = createSlice({
         state.error = action.payload;
       })
 
+      .addCase(getMyEntitlements.pending, (state) => {
+        state.entitlementsLoading = true;
+      })
+      .addCase(getMyEntitlements.fulfilled, (state, action) => {
+        state.entitlementsLoading = false;
+        state.entitlements = action.payload.data;
+        state.entitlementsUserId = action.payload.userId;
+      })
+      .addCase(getMyEntitlements.rejected, (state) => {
+        state.entitlementsLoading = false;
+      })
+
       .addMatcher(
-        (action) => action.type.startsWith('subscription/') && action.type.endsWith('/rejected'),
+        (action) => action.type.startsWith('subscription/') && action.type.endsWith('/rejected')
+          && !action.type.includes('getMyEntitlements'),
         (state, action) => {
           state.error = action.payload;
         }

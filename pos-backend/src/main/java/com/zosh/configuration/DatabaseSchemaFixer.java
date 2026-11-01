@@ -26,6 +26,7 @@ public class DatabaseSchemaFixer implements ApplicationRunner {
         try {
             dropLegacyCheckConstraints();
             repairEnumColumnsAndValues();
+            backfillCustomerStoreIds();
         } catch (Exception e) {
             log.warn("DatabaseSchemaFixer encountered a non-fatal warning: {}", e.getMessage());
         }
@@ -56,9 +57,15 @@ public class DatabaseSchemaFixer implements ApplicationRunner {
 
     private void repairEnumColumnsAndValues() {
         try {
-            jdbcTemplate.execute("ALTER TABLE `orders` MODIFY COLUMN `status` ENUM('COMPLETED','PENDING','REFUNDED') DEFAULT 'COMPLETED'");
+            jdbcTemplate.execute("ALTER TABLE `orders` MODIFY COLUMN `status` VARCHAR(32) DEFAULT 'COMPLETED'");
         } catch (Exception ex) {
             log.debug("Could not alter orders.status column: {}", ex.getMessage());
+        }
+
+        try {
+            jdbcTemplate.execute("ALTER TABLE `subscription` MODIFY COLUMN `gateway` VARCHAR(32)");
+        } catch (Exception ex) {
+            log.debug("Could not alter subscription.gateway column: {}", ex.getMessage());
         }
 
         jdbcTemplate.update("UPDATE `user` SET `role` = 'ROLE_ADMIN' WHERE (`role` = '' OR `role` IS NULL) AND `email` = 'admin@pos.com'");
@@ -78,5 +85,24 @@ public class DatabaseSchemaFixer implements ApplicationRunner {
         jdbcTemplate.update("UPDATE `orders` SET `payment_type` = 'CASH' WHERE `payment_type` = '' OR `payment_type` IS NULL");
         jdbcTemplate.update("UPDATE `orders` SET `status` = 'COMPLETED' WHERE `status` = '' OR `status` IS NULL");
         jdbcTemplate.update("UPDATE `refund` SET `payment_type` = 'CASH' WHERE `payment_type` = '' OR `payment_type` IS NULL");
+    }
+
+    private void backfillCustomerStoreIds() {
+        try {
+            jdbcTemplate.update("""
+                    UPDATE `customer` c
+                    JOIN (
+                        SELECT o.customer_id, MAX(b.store_id) AS store_id
+                        FROM `orders` o
+                        JOIN `branch` b ON o.branch_id = b.id
+                        WHERE o.customer_id IS NOT NULL AND b.store_id IS NOT NULL
+                        GROUP BY o.customer_id
+                    ) obs ON c.id = obs.customer_id
+                    SET c.store_id = obs.store_id
+                    WHERE c.store_id IS NULL
+                    """);
+        } catch (Exception ex) {
+            log.debug("Could not backfill customer.store_id from orders: {}", ex.getMessage());
+        }
     }
 }

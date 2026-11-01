@@ -12,6 +12,7 @@ import {
 import { getBranchById } from "../../../Redux Toolkit/features/branch/branchThunks";
 import { getInventoryByBranch } from "../../../Redux Toolkit/features/inventory/inventoryThunks";
 import { clearSearchResults } from "@/Redux Toolkit/features/product/productSlice";
+import usePlanEntitlements from "@/hooks/usePlanEntitlements";
 
 const ProductSection = ({ searchInputRef }) => {
   const dispatch = useDispatch();
@@ -27,6 +28,9 @@ const ProductSection = ({ searchInputRef }) => {
   } = useSelector((state) => state.product);
 
   const { toast } = useToast();
+  // Gói cước không có Inventory System: bán hàng không bị ràng buộc bởi tồn kho
+  const { hasFeature } = usePlanEntitlements();
+  const trackStock = hasFeature("inventory");
 
   // Gom tồn kho của chi nhánh hiện tại theo productId
   const inventoryMap = useMemo(() => {
@@ -224,6 +228,7 @@ const ProductSection = ({ searchInputRef }) => {
                 key={product.id}
                 product={product}
                 stockQuantity={inventoryMap[product.id] ?? 0}
+                trackStock={trackStock}
               />
             ))}
           </div>

@@ -5,6 +5,7 @@ import com.zosh.mapper.ProductMapper;
 import com.zosh.modal.*;
 import com.zosh.payload.dto.ProductDTO;
 import com.zosh.repository.*;
+import com.zosh.service.PlanLimitChecker;
 import com.zosh.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final InventoryRepository inventoryRepository;
     private final OrderItemRepository orderItemRepository;
+    private final PlanLimitChecker planLimitChecker;
 
     private void validateStoreAccess(User user, Store store) throws Exception {
         if (user == null || store == null) {
@@ -60,6 +62,7 @@ public class ProductServiceImpl implements ProductService {
             throw new Exception("Store not found");
         }
         validateStoreAccess(user, store);
+        planLimitChecker.checkProductLimit(store);
 
         Category category = null;
         if (productDTO.getCategoryId() != null) {
